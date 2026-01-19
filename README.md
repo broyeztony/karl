@@ -34,7 +34,6 @@ let value =
 
 log("value", value)
 
-// ─────────────────────────────────────────────────────────────
 // Concurrency / async tasks:
 // - `&` starts an asynchronous computation and returns a task.
 // - Tasks are composable via `.then(...)`.
