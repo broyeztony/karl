@@ -66,3 +66,11 @@ log("⌛️")
 let origin = wait t1
 origin
 ```
+
+### CLI
+
+```
+karl parse <file.k> [--format=pretty|json]
+karl run <file.k>
+cat <file.k> | karl run -
+```

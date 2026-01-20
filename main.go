@@ -19,82 +19,14 @@ func main() {
 	}
 
 	sub := os.Args[1]
-	if sub == "-h" || sub == "--help" {
+	switch sub {
+	case "-h", "--help", "help":
 		usage()
 		return
-	}
-	switch sub {
 	case "parse":
-		format, positional, err := parseArgs(os.Args[2:])
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			usage()
-			os.Exit(2)
-		}
-		if len(positional) != 1 {
-			usage()
-			os.Exit(2)
-		}
-		if err := validateExtension(positional[0]); err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			os.Exit(2)
-		}
-		data, err := readInput(positional[0])
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "read error: %v\n", err)
-			os.Exit(1)
-		}
-		program, err := parseProgram(data, displayName(positional[0]))
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-		switch format {
-		case "pretty":
-			fmt.Print(ast.Format(program))
-		case "json":
-			out, err := ast.FormatJSON(program)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "format error: %v\n", err)
-				os.Exit(1)
-			}
-			fmt.Print(out)
-		default:
-			fmt.Fprintf(os.Stderr, "unknown format: %s\n", format)
-			os.Exit(2)
-		}
+		os.Exit(parseCommand(os.Args[2:]))
 	case "run":
-		positional, err := parseArgsNoFlags(os.Args[2:])
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			usage()
-			os.Exit(2)
-		}
-		if len(positional) != 1 {
-			usage()
-			os.Exit(2)
-		}
-		if err := validateExtension(positional[0]); err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			os.Exit(2)
-		}
-		data, err := readInput(positional[0])
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "read error: %v\n", err)
-			os.Exit(1)
-		}
-		filename := displayName(positional[0])
-		program, err := parseProgram(data, filename)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-		val, err := runProgram(program, string(data), filename)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, interpreter.FormatRuntimeError(err, string(data), filename))
-			os.Exit(1)
-		}
-		fmt.Println(val.Inspect())
+		os.Exit(runCommand(os.Args[2:]))
 	default:
 		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", sub)
 		usage()
@@ -107,9 +39,109 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  karl parse <file.k> [--format=pretty|json]\n")
 	fmt.Fprintf(os.Stderr, "  karl run <file.k>\n")
 	fmt.Fprintf(os.Stderr, "  <file> can be '-' to read from stdin\n")
+	fmt.Fprintf(os.Stderr, "  Use \"karl <command> --help\" for command help\n")
 }
 
-func parseArgs(args []string) (string, []string, error) {
+func parseCommand(args []string) int {
+	format, positional, help, err := parseParseArgs(args)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		parseUsage()
+		return 2
+	}
+	if help {
+		parseUsage()
+		return 0
+	}
+	if len(positional) != 1 {
+		parseUsage()
+		return 2
+	}
+	if err := validateExtension(positional[0]); err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return 2
+	}
+	data, err := readInput(positional[0])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "read error: %v\n", err)
+		return 1
+	}
+	program, err := parseProgram(data, displayName(positional[0]))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return 1
+	}
+	switch format {
+	case "pretty":
+		fmt.Print(ast.Format(program))
+	case "json":
+		out, err := ast.FormatJSON(program)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "format error: %v\n", err)
+			return 1
+		}
+		fmt.Print(out)
+	default:
+		fmt.Fprintf(os.Stderr, "unknown format: %s\n", format)
+		return 2
+	}
+	return 0
+}
+
+func runCommand(args []string) int {
+	positional, help, err := parseRunArgs(args)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		runUsage()
+		return 2
+	}
+	if help {
+		runUsage()
+		return 0
+	}
+	if len(positional) != 1 {
+		runUsage()
+		return 2
+	}
+	if err := validateExtension(positional[0]); err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return 2
+	}
+	data, err := readInput(positional[0])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "read error: %v\n", err)
+		return 1
+	}
+	filename := displayName(positional[0])
+	program, err := parseProgram(data, filename)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return 1
+	}
+	val, err := runProgram(program, string(data), filename)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, interpreter.FormatRuntimeError(err, string(data), filename))
+		return 1
+	}
+	fmt.Println(val.Inspect())
+	return 0
+}
+
+func parseUsage() {
+	fmt.Fprintf(os.Stderr, "Usage:\n")
+	fmt.Fprintf(os.Stderr, "  karl parse <file.k> [--format=pretty|json]\n")
+	fmt.Fprintf(os.Stderr, "  <file> can be '-' to read from stdin\n")
+	fmt.Fprintf(os.Stderr, "\nOptions:\n")
+	fmt.Fprintf(os.Stderr, "  --format string   output format: pretty|json (default \"pretty\")\n")
+}
+
+func runUsage() {
+	fmt.Fprintf(os.Stderr, "Usage:\n")
+	fmt.Fprintf(os.Stderr, "  karl run <file.k>\n")
+	fmt.Fprintf(os.Stderr, "  <file> can be '-' to read from stdin\n")
+}
+
+func parseParseArgs(args []string) (string, []string, bool, error) {
 	format := "pretty"
 	positional := []string{}
 
@@ -117,40 +149,42 @@ func parseArgs(args []string) (string, []string, error) {
 		arg := args[i]
 		switch {
 		case arg == "-h" || arg == "--help":
-			return format, positional, fmt.Errorf("help requested")
+			return format, positional, true, nil
 		case arg == "-":
 			positional = append(positional, arg)
 		case strings.HasPrefix(arg, "--format="):
 			format = strings.TrimPrefix(arg, "--format=")
 		case arg == "--format":
 			if i+1 >= len(args) {
-				return format, positional, fmt.Errorf("--format requires a value")
+				return format, positional, false, fmt.Errorf("--format requires a value")
 			}
 			format = args[i+1]
 			i++
 		case strings.HasPrefix(arg, "-"):
-			return format, positional, fmt.Errorf("unknown flag: %s", arg)
+			return format, positional, false, fmt.Errorf("unknown flag: %s", arg)
 		default:
 			positional = append(positional, arg)
 		}
 	}
 
-	return format, positional, nil
+	return format, positional, false, nil
 }
 
-func parseArgsNoFlags(args []string) ([]string, error) {
+func parseRunArgs(args []string) ([]string, bool, error) {
 	positional := []string{}
 	for _, arg := range args {
-		if arg == "-" {
+		switch {
+		case arg == "-h" || arg == "--help":
+			return positional, true, nil
+		case arg == "-":
 			positional = append(positional, arg)
-			continue
+		case strings.HasPrefix(arg, "-"):
+			return positional, false, fmt.Errorf("unknown flag: %s", arg)
+		default:
+			positional = append(positional, arg)
 		}
-		if strings.HasPrefix(arg, "-") {
-			return nil, fmt.Errorf("unknown flag: %s", arg)
-		}
-		positional = append(positional, arg)
 	}
-	return positional, nil
+	return positional, false, nil
 }
 
 func readInput(path string) ([]byte, error) {
