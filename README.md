@@ -37,7 +37,7 @@ log("value", value)
 // Concurrency / async tasks:
 // - `&` starts an asynchronous computation and returns a task.
 // - Tasks are composable via `.then(...)`.
-let t0 = &http({
+let t0 = & http({
     method: "GET",
     url: "https://httpbin.org/delay/2",
     headers: map(),
