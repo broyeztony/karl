@@ -1026,7 +1026,7 @@ func (p *Parser) braceLooksLikeObject() bool {
 	peek := p.peekToken
 	lcopy := *p.l
 	if peek.Type == token.LBRACE {
-		peek = lcopy.NextToken()
+		return false
 	}
 
 	switch peek.Type {

@@ -540,15 +540,17 @@ let sorted = from user in users
 // 14. IMPORTS
 // ============================================
 
-// Import evaluates another Karl file and returns its top-level bindings as an object.
+// Import returns a factory; calling it returns module bindings.
 // Imports are expressions and can be used anywhere.
-let util = import "SPECS/examples/11_import.k"
-log(util.utility())
+let makeUtil = import "examples/features/import_module.k"
+let util = makeUtil()
+log(util.greet("karl"))
 
 // Import rules:
 // - The path is a string literal resolved from the project root.
-// - The imported module returns an object containing all top-level let bindings.
+// - The factory returns an object containing all top-level let bindings.
 // - There is no export keyword yet; all top-level lets are exported.
+// - The returned object is live: assigning to its properties updates the module instance.
 // - Name collisions are the caller's responsibility (avoid duplicate paths).
 // - Dependency manager support is out of scope for now.
 

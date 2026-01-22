@@ -360,7 +360,7 @@ func TestEvalImportLocal(t *testing.T) {
 		t.Fatalf("write module: %v", err)
 	}
 
-	input := `let util = import "util.k"; util.answer`
+	input := `let makeUtil = import "util.k"; let util = makeUtil(); util.answer`
 	p := parser.New(lexer.New(input))
 	program := p.ParseProgram()
 	if errs := p.Errors(); len(errs) > 0 {
@@ -380,6 +380,99 @@ func TestEvalImportLocal(t *testing.T) {
 		t.Fatalf("unexpected signal: %v", sig.Type)
 	}
 	assertInteger(t, val, 42)
+}
+
+func TestEvalImportFactoryInstances(t *testing.T) {
+	dir := t.TempDir()
+	modulePath := filepath.Join(dir, "counter.k")
+	module := `
+let count = 0
+let inc = () -> { count += 1; count }
+let get = () -> count
+`
+	if err := os.WriteFile(modulePath, []byte(module), 0o644); err != nil {
+		t.Fatalf("write module: %v", err)
+	}
+
+	input := `
+let makeCounter = import "counter.k"
+let a = makeCounter()
+let b = makeCounter()
+a.inc()
+a.inc()
+b.inc()
+let output = [a.get(), b.get()]
+output
+`
+	p := parser.New(lexer.New(input))
+	program := p.ParseProgram()
+	if errs := p.Errors(); len(errs) > 0 {
+		for _, e := range errs {
+			t.Errorf("parse error: %s", e)
+		}
+		t.Fatalf("parse failed")
+	}
+
+	eval := interpreter.NewEvaluatorWithSourceFilenameAndRoot(input, "<stdin>", dir)
+	env := interpreter.NewBaseEnvironment()
+	val, sig, err := eval.Eval(program, env)
+	if err != nil {
+		t.Fatalf("eval error: %v", err)
+	}
+	if sig != nil {
+		t.Fatalf("unexpected signal: %v", sig.Type)
+	}
+	expected := &Array{Elements: []Value{
+		&Integer{Value: 2},
+		&Integer{Value: 1},
+	}}
+	assertEquivalent(t, val, expected)
+}
+
+func TestEvalImportLiveExports(t *testing.T) {
+	dir := t.TempDir()
+	modulePath := filepath.Join(dir, "counter.k")
+	module := `
+let count = 0
+let get = () -> count
+`
+	if err := os.WriteFile(modulePath, []byte(module), 0o644); err != nil {
+		t.Fatalf("write module: %v", err)
+	}
+
+	input := `
+let makeCounter = import "counter.k"
+let a = makeCounter()
+a.count = 4
+a.newProp = 7
+a.get = () -> 99
+let output = [a.count, a.get(), a.newProp]
+output
+`
+	p := parser.New(lexer.New(input))
+	program := p.ParseProgram()
+	if errs := p.Errors(); len(errs) > 0 {
+		for _, e := range errs {
+			t.Errorf("parse error: %s", e)
+		}
+		t.Fatalf("parse failed")
+	}
+
+	eval := interpreter.NewEvaluatorWithSourceFilenameAndRoot(input, "<stdin>", dir)
+	env := interpreter.NewBaseEnvironment()
+	val, sig, err := eval.Eval(program, env)
+	if err != nil {
+		t.Fatalf("eval error: %v", err)
+	}
+	if sig != nil {
+		t.Fatalf("unexpected signal: %v", sig.Type)
+	}
+	expected := &Array{Elements: []Value{
+		&Integer{Value: 4},
+		&Integer{Value: 99},
+		&Integer{Value: 7},
+	}}
+	assertEquivalent(t, val, expected)
 }
 
 func TestEvalStringMethods(t *testing.T) {

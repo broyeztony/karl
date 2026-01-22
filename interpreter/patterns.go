@@ -98,12 +98,12 @@ func matchRangePattern(p *ast.RangePattern, value Value) (bool, error) {
 }
 
 func matchObjectPattern(p *ast.ObjectPattern, value Value, env *Environment) (bool, error) {
-	obj, ok := value.(*Object)
+	obj, ok := objectPairs(value)
 	if !ok {
 		return false, nil
 	}
 	for _, entry := range p.Entries {
-		val, ok := obj.Pairs[entry.Key]
+		val, ok := obj[entry.Key]
 		if !ok {
 			return false, nil
 		}

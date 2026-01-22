@@ -62,20 +62,12 @@ func Equivalent(left, right Value) bool {
 		}
 		return true
 	case *Object:
-		r := right.(*Object)
-		if len(l.Pairs) != len(r.Pairs) {
+		return equivalentObjectPairs(l.Pairs, right)
+	case *ModuleObject:
+		if l.Env == nil {
 			return false
 		}
-		for k, v := range l.Pairs {
-			ov, ok := r.Pairs[k]
-			if !ok {
-				return false
-			}
-			if !Equivalent(v, ov) {
-				return false
-			}
-		}
-		return true
+		return equivalentObjectPairs(l.Env.Snapshot(), right)
 	case *Map:
 		r := right.(*Map)
 		if len(l.Pairs) != len(r.Pairs) {
@@ -94,4 +86,24 @@ func Equivalent(left, right Value) bool {
 	default:
 		return left == right
 	}
+}
+
+func equivalentObjectPairs(left map[string]Value, right Value) bool {
+	rightPairs, ok := objectPairs(right)
+	if !ok {
+		return false
+	}
+	if len(left) != len(rightPairs) {
+		return false
+	}
+	for k, v := range left {
+		ov, ok := rightPairs[k]
+		if !ok {
+			return false
+		}
+		if !Equivalent(v, ov) {
+			return false
+		}
+	}
+	return true
 }

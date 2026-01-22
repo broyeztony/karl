@@ -1,6 +1,7 @@
-// import returns an object of bindings.
+// import returns a factory; calling it returns bindings.
 
-let util = import "examples/features/import_module.k"
+let makeUtil = import "examples/features/import_module.k"
+let util = makeUtil()
 let msg = util.greet("karl")
 let output = [msg, util.answer]
 output

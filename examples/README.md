@@ -22,7 +22,9 @@ Each example is intended to be standalone and to demonstrate one specific featur
 - `examples/features/concurrency_basic.k` - `&`, `|`, `then`, `wait`
 - `examples/features/concurrency_advanced.k` - rendezvous send/recv
 - `examples/features/import_module.k` - module to import
-- `examples/features/import_use.k` - import usage
+- `examples/features/import_use.k` - import factory usage
+- `examples/features/import_instances_module.k` - module with per-instance state
+- `examples/features/import_instances.k` - multiple import instances
 - `examples/features/query_basic.k` - query expressions
 - `examples/features/equality.k` - `==` vs `eqv`
 

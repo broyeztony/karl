@@ -10,7 +10,7 @@ let sumOdds = for i < 6 with i = 0, acc = 0 {
     i++
     if i % 2 == 0 { continue }
     acc += i
-} then acc;
-}
+} then acc
 
-{ stopped, sumOdds, }
+let output = { stopped, sumOdds, }
+output

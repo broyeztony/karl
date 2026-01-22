@@ -31,6 +31,13 @@ func (e *Environment) Get(name string) (Value, bool) {
 	return nil, false
 }
 
+func (e *Environment) GetLocal(name string) (Value, bool) {
+	e.mu.RLock()
+	val, ok := e.store[name]
+	e.mu.RUnlock()
+	return val, ok
+}
+
 func (e *Environment) Define(name string, val Value) {
 	e.mu.Lock()
 	e.store[name] = val

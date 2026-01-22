@@ -158,13 +158,14 @@ Ordering requires comparable keys; otherwise runtime error.
 
 ### Import
 
-- `import "path"` loads another Karl file and returns an object with its top-level `let` bindings.
+- `import "path"` returns a zero-argument factory function.
+- Calling the factory evaluates the module in a fresh environment and returns an object of its top-level `let` bindings.
+- The returned object is a live view of the module environment; assignments update that instance.
 - Path resolution is relative to the project root.
 - Recommended implementation:
   - Resolve the path to an absolute filename.
-  - If the module was already imported, return the cached object.
-  - Otherwise, parse and evaluate the module in a fresh environment.
-  - Collect all top-level `let` bindings into an object and cache it.
+  - Parse and cache the module program.
+  - Each factory call evaluates the cached program in a new environment and returns its bindings.
 - Current implementation uses the evaluator's `projectRoot`; if unset, it falls back to the process working directory.
 - Dependency manager support is out of scope for now.
 

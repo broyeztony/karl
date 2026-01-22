@@ -13,15 +13,21 @@ import (
 
 type moduleState struct {
 	mu      sync.Mutex
-	loaded  map[string]*Object
+	loaded  map[string]*moduleDefinition
 	loading map[string]bool
 }
 
 func newModuleState() *moduleState {
 	return &moduleState{
-		loaded:  make(map[string]*Object),
+		loaded:  make(map[string]*moduleDefinition),
 		loading: make(map[string]bool),
 	}
+}
+
+type moduleDefinition struct {
+	program  *ast.Program
+	source   string
+	filename string
 }
 
 func (e *Evaluator) evalImportExpression(node *ast.ImportExpression, _ *Environment) (Value, *Signal, error) {
@@ -36,7 +42,31 @@ func (e *Evaluator) evalImportExpression(node *ast.ImportExpression, _ *Environm
 	if err != nil {
 		return nil, nil, err
 	}
-	return module, nil, nil
+	factory := &Builtin{
+		Name: "moduleFactory",
+		Fn: func(_ *Evaluator, args []Value) (Value, error) {
+			if len(args) != 0 {
+				return nil, &RuntimeError{Message: "module factory expects no arguments"}
+			}
+			moduleEnv := NewEnclosedEnvironment(NewBaseEnvironment())
+			moduleEval := &Evaluator{
+				source:      module.source,
+				filename:    module.filename,
+				projectRoot: e.projectRoot,
+				modules:     e.modules,
+			}
+			val, sig, err := moduleEval.Eval(module.program, moduleEnv)
+			if err != nil {
+				return nil, fmt.Errorf("%s", FormatRuntimeError(err, moduleEval.source, moduleEval.filename))
+			}
+			if sig != nil {
+				return nil, &RuntimeError{Message: "break/continue outside loop"}
+			}
+			_ = val
+			return &ModuleObject{Env: moduleEnv}, nil
+		},
+	}
+	return factory, nil, nil
 }
 
 func (e *Evaluator) resolveImportPath(path string) (string, error) {
@@ -54,7 +84,7 @@ func (e *Evaluator) resolveImportPath(path string) (string, error) {
 	return filepath.Join(root, path), nil
 }
 
-func (e *Evaluator) loadModule(path string) (*Object, error) {
+func (e *Evaluator) loadModule(path string) (*moduleDefinition, error) {
 	resolved := filepath.Clean(path)
 	if abs, err := filepath.Abs(resolved); err == nil {
 		resolved = abs
@@ -91,30 +121,15 @@ func (e *Evaluator) loadModule(path string) (*Object, error) {
 		return nil, err
 	}
 
-	moduleEnv := NewEnclosedEnvironment(NewBaseEnvironment())
-	moduleEval := &Evaluator{
-		source:      string(data),
-		filename:    resolved,
-		projectRoot: e.projectRoot,
-		modules:     e.modules,
+	definition := &moduleDefinition{
+		program:  program,
+		source:   string(data),
+		filename: resolved,
 	}
-	val, sig, err := moduleEval.Eval(program, moduleEnv)
-	if err != nil {
-		if _, ok := err.(*RuntimeError); ok {
-			return nil, fmt.Errorf("%s", FormatRuntimeError(err, moduleEval.source, moduleEval.filename))
-		}
-		return nil, err
-	}
-	if sig != nil {
-		return nil, &RuntimeError{Message: "break/continue outside loop"}
-	}
-	_ = val
-
-	exports := &Object{Pairs: moduleEnv.Snapshot()}
 	e.modules.mu.Lock()
-	e.modules.loaded[resolved] = exports
+	e.modules.loaded[resolved] = definition
 	e.modules.mu.Unlock()
-	return exports, nil
+	return definition, nil
 }
 
 func parseImportProgram(data []byte, filename string) (*ast.Program, error) {

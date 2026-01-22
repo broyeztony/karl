@@ -113,10 +113,26 @@ type Object struct {
 
 func (o *Object) Type() ValueType { return OBJECT }
 func (o *Object) Inspect() string {
+	return inspectObjectPairs(o.Pairs)
+}
+
+type ModuleObject struct {
+	Env *Environment
+}
+
+func (o *ModuleObject) Type() ValueType { return OBJECT }
+func (o *ModuleObject) Inspect() string {
+	if o.Env == nil {
+		return "{}"
+	}
+	return inspectObjectPairs(o.Env.Snapshot())
+}
+
+func inspectObjectPairs(pairs map[string]Value) string {
 	var out bytes.Buffer
 	out.WriteString("{")
 	first := true
-	for k, v := range o.Pairs {
+	for k, v := range pairs {
 		if !first {
 			out.WriteString(", ")
 		}

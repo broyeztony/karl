@@ -629,6 +629,15 @@ func (e *Evaluator) evalMemberExpression(node *ast.MemberExpression, env *Enviro
 			return nil, nil, &RuntimeError{Message: "missing property: " + node.Property.Value}
 		}
 		return val, nil, nil
+	case *ModuleObject:
+		if obj.Env == nil {
+			return nil, nil, &RuntimeError{Message: "member access on invalid module object"}
+		}
+		val, ok := obj.Env.GetLocal(node.Property.Value)
+		if !ok {
+			return nil, nil, &RuntimeError{Message: "missing property: " + node.Property.Value}
+		}
+		return val, nil, nil
 	case *Array:
 		if node.Property.Value == "length" {
 			return &Integer{Value: int64(len(obj.Elements))}, nil, nil
@@ -757,11 +766,11 @@ func (e *Evaluator) evalObjectLiteral(node *ast.ObjectLiteral, env *Environment)
 			if err != nil || sig != nil {
 				return val, sig, err
 			}
-			other, ok := val.(*Object)
+			pairs, ok := objectPairs(val)
 			if !ok {
 				return nil, nil, &RuntimeError{Message: "object spread requires object"}
 			}
-			for k, v := range other.Pairs {
+			for k, v := range pairs {
 				obj.Pairs[k] = v
 			}
 			continue
@@ -1127,11 +1136,18 @@ func (e *Evaluator) resolveAssignable(node ast.Expression, env *Environment) (Va
 		if err != nil || sig != nil {
 			return nil, nil, err
 		}
-		obj, ok := objVal.(*Object)
-		if !ok {
+		switch obj := objVal.(type) {
+		case *Object:
+			return obj.Pairs[n.Property.Value], func(v Value) { obj.Pairs[n.Property.Value] = v }, nil
+		case *ModuleObject:
+			if obj.Env == nil {
+				return nil, nil, &RuntimeError{Message: "member assignment requires object"}
+			}
+			val, _ := obj.Env.GetLocal(n.Property.Value)
+			return val, func(v Value) { obj.Env.Define(n.Property.Value, v) }, nil
+		default:
 			return nil, nil, &RuntimeError{Message: "member assignment requires object"}
 		}
-		return obj.Pairs[n.Property.Value], func(v Value) { obj.Pairs[n.Property.Value] = v }, nil
 	case *ast.IndexExpression:
 		left, sig, err := e.Eval(n.Left, env)
 		if err != nil || sig != nil {

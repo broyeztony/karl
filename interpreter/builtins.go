@@ -362,11 +362,11 @@ func builtinHTTP(_ *Evaluator, args []Value) (Value, error) {
 	if len(args) != 1 {
 		return nil, &RuntimeError{Message: "http expects request object"}
 	}
-	reqObj, ok := args[0].(*Object)
+	reqObj, ok := objectPairs(args[0])
 	if !ok {
 		return nil, &RuntimeError{Message: "http expects object request"}
 	}
-	methodVal, ok := reqObj.Pairs["method"]
+	methodVal, ok := reqObj["method"]
 	if !ok {
 		methodVal = &String{Value: "GET"}
 	}
@@ -374,7 +374,7 @@ func builtinHTTP(_ *Evaluator, args []Value) (Value, error) {
 	if !ok {
 		return nil, &RuntimeError{Message: "http method must be string"}
 	}
-	urlVal, ok := reqObj.Pairs["url"]
+	urlVal, ok := reqObj["url"]
 	if !ok {
 		return nil, &RuntimeError{Message: "http expects url"}
 	}
@@ -383,7 +383,7 @@ func builtinHTTP(_ *Evaluator, args []Value) (Value, error) {
 		return nil, &RuntimeError{Message: "http url must be string"}
 	}
 	var body io.Reader
-	if bodyVal, ok := reqObj.Pairs["body"]; ok && bodyVal != NullValue {
+	if bodyVal, ok := reqObj["body"]; ok && bodyVal != NullValue {
 		bodyStr, ok := stringArg(bodyVal)
 		if !ok {
 			return nil, &RuntimeError{Message: "http body must be string"}
@@ -394,7 +394,7 @@ func builtinHTTP(_ *Evaluator, args []Value) (Value, error) {
 	if err != nil {
 		return nil, recoverableError("http", "http request error: "+err.Error())
 	}
-	if headersVal, ok := reqObj.Pairs["headers"]; ok && headersVal != NullValue {
+	if headersVal, ok := reqObj["headers"]; ok && headersVal != NullValue {
 		headers, err := extractHeaders(headersVal)
 		if err != nil {
 			return nil, err
@@ -428,6 +428,19 @@ func extractHeaders(val Value) (map[string]string, error) {
 	case *Object:
 		out := make(map[string]string, len(headers.Pairs))
 		for k, v := range headers.Pairs {
+			str, ok := stringArg(v)
+			if !ok {
+				return nil, &RuntimeError{Message: "http headers values must be strings"}
+			}
+			out[k] = str
+		}
+		return out, nil
+	case *ModuleObject:
+		if headers.Env == nil {
+			return nil, &RuntimeError{Message: "http headers must be object or map"}
+		}
+		out := make(map[string]string)
+		for k, v := range headers.Env.Snapshot() {
 			str, ok := stringArg(v)
 			if !ok {
 				return nil, &RuntimeError{Message: "http headers values must be strings"}
@@ -498,6 +511,19 @@ func encodeJSONValue(value Value) (interface{}, error) {
 	case *Object:
 		out := make(map[string]interface{}, len(v.Pairs))
 		for k, val := range v.Pairs {
+			enc, err := encodeJSONValue(val)
+			if err != nil {
+				return nil, err
+			}
+			out[k] = enc
+		}
+		return out, nil
+	case *ModuleObject:
+		if v.Env == nil {
+			return map[string]interface{}{}, nil
+		}
+		out := make(map[string]interface{})
+		for k, val := range v.Env.Snapshot() {
 			enc, err := encodeJSONValue(val)
 			if err != nil {
 				return nil, err
