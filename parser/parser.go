@@ -1026,15 +1026,17 @@ func (p *Parser) braceLooksLikeObject() bool {
 	peek := p.peekToken
 	lcopy := *p.l
 
-	if peek.Type == token.LBRACE {
-		peek = lcopy.NextToken()
-		if peek.Type == token.RBRACE {
-			// Empty literal: treat as object.
-			return true
-		}
-	} else if peek.Type == token.RBRACE {
+	if peek.Type == token.RBRACE {
 		// Empty literal: treat as object.
 		return true
+	}
+
+	// For struct init (IDENT { ... }), skip the opening brace and inspect contents.
+	if !p.curTokenIs(token.LBRACE) && peek.Type == token.LBRACE {
+		peek = lcopy.NextToken()
+		if peek.Type == token.RBRACE {
+			return true
+		}
 	}
 
 	depthParen := 0
@@ -1042,22 +1044,6 @@ func (p *Parser) braceLooksLikeObject() bool {
 	depthBracket := 0
 	tok := peek
 	for tok.Type != token.EOF {
-		if depthParen == 0 && depthBrace == 0 && depthBracket == 0 {
-			switch tok.Type {
-			case token.COLON, token.DOTDOTDOT:
-				return true
-			case token.COMMA:
-				next := lcopy.NextToken()
-				if next.Type == token.RBRACE {
-					return true
-				}
-				tok = next
-				continue
-			case token.RBRACE:
-				return false
-			}
-		}
-
 		switch tok.Type {
 		case token.LPAREN:
 			depthParen++
@@ -1077,6 +1063,22 @@ func (p *Parser) braceLooksLikeObject() bool {
 		case token.RBRACKET:
 			if depthBracket > 0 {
 				depthBracket--
+			}
+		}
+
+		if depthParen == 0 && depthBrace == 0 && depthBracket == 0 {
+			switch tok.Type {
+			case token.COLON, token.DOTDOTDOT:
+				return true
+			case token.COMMA:
+				next := lcopy.NextToken()
+				if next.Type == token.RBRACE {
+					return true
+				}
+				tok = next
+				continue
+			case token.RBRACE:
+				return false
 			}
 		}
 
