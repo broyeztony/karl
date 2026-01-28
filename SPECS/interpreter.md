@@ -520,3 +520,10 @@ The CLI can evaluate Karl source or print its AST:
 - `karl parse <file.k> [--format=pretty|json]`
 - `karl run <file.k>`
 - `cat <file.k> | karl run -`
+
+## Known Limitations / Notes
+
+- The interpreter is a direct AST evaluator (no bytecode/JIT or optimization passes).
+- Tasks are backed by goroutines; task scheduling order is nondeterministic.
+- Range expressions are eager and allocate full arrays.
+- No tail-call optimization; deep recursion can overflow the Go stack.
