@@ -620,3 +620,90 @@ func TestPatternKinds(t *testing.T) {
 		t.Fatalf("expected CharLiteral pattern, got %T", match.Arms[8].Pattern)
 	}
 }
+
+func TestPatternLetObjectDestructure(t *testing.T) {
+	input := `
+let { a, b } = foo
+let { a, b, } = foo
+let { a: a1, b: b1, } = foo
+`
+	program := parseProgram(t, input)
+	if len(program.Statements) != 3 {
+		t.Fatalf("expected 3 statements, got %d", len(program.Statements))
+	}
+
+	for i, stmt := range program.Statements {
+		letStmt, ok := stmt.(*ast.LetStatement)
+		if !ok {
+			t.Fatalf("expected LetStatement at %d, got %T", i, stmt)
+		}
+		obj, ok := letStmt.Name.(*ast.ObjectPattern)
+		if !ok {
+			t.Fatalf("expected ObjectPattern at %d, got %T", i, letStmt.Name)
+		}
+		if len(obj.Entries) != 2 {
+			t.Fatalf("expected 2 object entries at %d, got %d", i, len(obj.Entries))
+		}
+	}
+}
+
+func TestPatternTrailingComma(t *testing.T) {
+	input := `
+let { a, b, } = foo
+let [c, d, ] = bar
+let [head, ...tail, ] = baz
+let (x, y, ) = pair
+`
+	program := parseProgram(t, input)
+	if len(program.Statements) != 4 {
+		t.Fatalf("expected 4 statements, got %d", len(program.Statements))
+	}
+
+	stmt0, ok := program.Statements[0].(*ast.LetStatement)
+	if !ok {
+		t.Fatalf("expected LetStatement, got %T", program.Statements[0])
+	}
+	obj, ok := stmt0.Name.(*ast.ObjectPattern)
+	if !ok {
+		t.Fatalf("expected ObjectPattern, got %T", stmt0.Name)
+	}
+	if len(obj.Entries) != 2 {
+		t.Fatalf("expected 2 object entries, got %d", len(obj.Entries))
+	}
+
+	stmt1, ok := program.Statements[1].(*ast.LetStatement)
+	if !ok {
+		t.Fatalf("expected LetStatement, got %T", program.Statements[1])
+	}
+	arr, ok := stmt1.Name.(*ast.ArrayPattern)
+	if !ok {
+		t.Fatalf("expected ArrayPattern, got %T", stmt1.Name)
+	}
+	if len(arr.Elements) != 2 {
+		t.Fatalf("expected 2 array elements, got %d", len(arr.Elements))
+	}
+
+	stmt2, ok := program.Statements[2].(*ast.LetStatement)
+	if !ok {
+		t.Fatalf("expected LetStatement, got %T", program.Statements[2])
+	}
+	arrRest, ok := stmt2.Name.(*ast.ArrayPattern)
+	if !ok {
+		t.Fatalf("expected ArrayPattern, got %T", stmt2.Name)
+	}
+	if arrRest.Rest == nil {
+		t.Fatalf("expected rest pattern")
+	}
+
+	stmt3, ok := program.Statements[3].(*ast.LetStatement)
+	if !ok {
+		t.Fatalf("expected LetStatement, got %T", program.Statements[3])
+	}
+	tuple, ok := stmt3.Name.(*ast.TuplePattern)
+	if !ok {
+		t.Fatalf("expected TuplePattern, got %T", stmt3.Name)
+	}
+	if len(tuple.Elements) != 2 {
+		t.Fatalf("expected 2 tuple elements, got %d", len(tuple.Elements))
+	}
+}

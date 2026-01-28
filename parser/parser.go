@@ -935,6 +935,10 @@ func (p *Parser) parseObjectPattern() ast.Pattern {
 
 		if p.peekTokenIs(token.COMMA) {
 			p.nextToken()
+			if p.peekTokenIs(token.RBRACE) {
+				p.nextToken()
+				return pattern
+			}
 			p.nextToken()
 			continue
 		}
@@ -960,12 +964,23 @@ func (p *Parser) parseArrayPattern() ast.Pattern {
 		if p.curTokenIs(token.DOTDOTDOT) {
 			p.nextToken()
 			pattern.Rest = p.parsePattern()
+			if p.peekTokenIs(token.COMMA) {
+				p.nextToken()
+				if p.peekTokenIs(token.RBRACKET) {
+					p.nextToken()
+					return pattern
+				}
+			}
 			break
 		}
 		pattern.Elements = append(pattern.Elements, p.parsePattern())
 
 		if p.peekTokenIs(token.COMMA) {
 			p.nextToken()
+			if p.peekTokenIs(token.RBRACKET) {
+				p.nextToken()
+				return pattern
+			}
 			p.nextToken()
 			continue
 		}
@@ -990,6 +1005,10 @@ func (p *Parser) parseTuplePattern() ast.Pattern {
 	pattern.Elements = append(pattern.Elements, p.parsePattern())
 	for p.peekTokenIs(token.COMMA) {
 		p.nextToken()
+		if p.peekTokenIs(token.RPAREN) {
+			p.nextToken()
+			return pattern
+		}
 		p.nextToken()
 		pattern.Elements = append(pattern.Elements, p.parsePattern())
 	}

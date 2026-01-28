@@ -75,3 +75,20 @@ karl run <file.k>
 cat <file.k> | karl run -
 ```
 
+### Tests
+
+```
+go test ./...
+```
+
+If your environment blocks the default Go build cache, run:
+
+```
+GOCACHE=$(pwd)/.go-cache go test ./...
+```
+
+### Specs
+
+- `SPECS/language.md` — syntax + semantics
+- `SPECS/interpreter.md` — runtime model and evaluator notes
+- `SPECS/todolist.md` — short, current priorities for contributors

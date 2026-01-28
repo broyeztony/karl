@@ -290,6 +290,8 @@ let total = for i <= 10 with i = 1, acc = 0 {
 let { x, y } = point
 let [first, ...rest] = list
 let (a, b) = tuple
+// Trailing commas are allowed in object/array/tuple patterns.
+let { x, y, } = point
 
 // Structural patterns in match
 let value = match data {
@@ -651,9 +653,9 @@ query_expr      = "from" IDENT "in" expr
                   "select" expr ;
 
 pattern         = "_" | literal | IDENT | range_pattern
-                | "{" [ pattern_entry { "," pattern_entry } ] "}"
-                | "[" [ pattern { "," pattern } ] [ "," "..." pattern ] "]"
-                | "(" [ pattern { "," pattern } ] ")" ;
+                | "{" [ pattern_entry { "," pattern_entry } [ "," ] ] "}"
+                | "[" [ pattern { "," pattern } ] [ "," "..." pattern ] [ "," ] "]"
+                | "(" [ pattern { "," pattern } ] [ "," ] ")" ;
 pattern_entry   = IDENT [ ":" pattern ] ;
 
 range_pattern   = literal ".." literal ;
