@@ -621,6 +621,52 @@ func TestPatternKinds(t *testing.T) {
 	}
 }
 
+func TestMatchGuardParsesWithoutLambda(t *testing.T) {
+	input := `match sum_divs { case _ if sum_divs > n -> 1 case _ -> 0 }`
+	program := parseProgram(t, input)
+	stmt := program.Statements[0].(*ast.ExpressionStatement)
+	match, ok := stmt.Expression.(*ast.MatchExpression)
+	if !ok {
+		t.Fatalf("expected MatchExpression, got %T", stmt.Expression)
+	}
+	if len(match.Arms) != 2 {
+		t.Fatalf("expected 2 arms, got %d", len(match.Arms))
+	}
+	if match.Arms[0].Guard == nil {
+		t.Fatalf("expected guard expression")
+	}
+	guard, ok := match.Arms[0].Guard.(*ast.InfixExpression)
+	if !ok {
+		t.Fatalf("expected InfixExpression guard, got %T", match.Arms[0].Guard)
+	}
+	if guard.Operator != ">" {
+		t.Fatalf("expected '>' guard operator, got %q", guard.Operator)
+	}
+	right, ok := guard.Right.(*ast.Identifier)
+	if !ok || right.Value != "n" {
+		t.Fatalf("expected guard right identifier 'n', got %T", guard.Right)
+	}
+}
+
+func TestMatchGuardNestedMatch(t *testing.T) {
+	input := `match n { case _ if match n % 2 { case 0 -> true case _ -> false } -> "even" case _ -> "odd" }`
+	program := parseProgram(t, input)
+	stmt := program.Statements[0].(*ast.ExpressionStatement)
+	match, ok := stmt.Expression.(*ast.MatchExpression)
+	if !ok {
+		t.Fatalf("expected MatchExpression, got %T", stmt.Expression)
+	}
+	if len(match.Arms) != 2 {
+		t.Fatalf("expected 2 arms, got %d", len(match.Arms))
+	}
+	if match.Arms[0].Guard == nil {
+		t.Fatalf("expected guard expression")
+	}
+	if _, ok := match.Arms[0].Guard.(*ast.MatchExpression); !ok {
+		t.Fatalf("expected MatchExpression guard, got %T", match.Arms[0].Guard)
+	}
+}
+
 func TestPatternLetObjectDestructure(t *testing.T) {
 	input := `
 let { a, b } = foo

@@ -6,7 +6,7 @@ Each example is intended to be standalone and to demonstrate one specific featur
 ## Feature Examples
 
 - `examples/features/if_else.k` - if/else expressions
-- `examples/features/match_basic.k` - match with range and wildcard
+- `examples/features/match_examples.k` - match with range, wildcard, and guards
 - `examples/features/loop_for.k` - for loops with break/continue
 - `examples/features/functions_basic.k` - basic functions
 - `examples/features/recursion.k` - recursion
@@ -28,6 +28,10 @@ Each example is intended to be standalone and to demonstrate one specific featur
 - `examples/features/import_instances.k` - multiple import instances
 - `examples/features/query_basic.k` - query expressions
 - `examples/features/equality.k` - `==` vs `eqv`
+
+## Community Examples
+
+- `examples/contrib/nico/README.md` - extended example programs (by Nico)
 
 ## Programs
 

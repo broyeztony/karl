@@ -23,6 +23,8 @@ type Parser struct {
 
 	prefixParseFns map[token.TokenType]prefixParseFn
 	infixParseFns  map[token.TokenType]infixParseFn
+
+	allowLambda bool
 }
 
 const (
@@ -71,7 +73,7 @@ var precedences = map[token.TokenType]int{
 }
 
 func New(l *lexer.Lexer) *Parser {
-	p := &Parser{l: l, errors: []ParseError{}}
+	p := &Parser{l: l, errors: []ParseError{}, allowLambda: true}
 
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
@@ -240,7 +242,7 @@ func (p *Parser) parseIdentifier() ast.Expression {
 	if p.curToken.Literal == "_" {
 		return &ast.Placeholder{Token: p.curToken}
 	}
-	if p.peekTokenIs(token.ARROW) {
+	if p.allowLambda && p.peekTokenIs(token.ARROW) {
 		param := p.parsePatternFromToken(p.curToken)
 		p.nextToken()
 		return p.finishLambda([]ast.Pattern{param})
@@ -372,7 +374,7 @@ func (p *Parser) parseRaceOrSpawnGroup() []ast.Expression {
 }
 
 func (p *Parser) parseGroupedOrLambda() ast.Expression {
-	if p.isLambdaParams() {
+	if p.allowLambda && p.isLambdaParams() {
 		params := p.parseLambdaParams()
 		return p.finishLambda(params)
 	}
@@ -440,7 +442,10 @@ func (p *Parser) parseMatchExpression() ast.Expression {
 		if p.peekTokenIs(token.IF) {
 			p.nextToken()
 			p.nextToken()
+			prevAllowLambda := p.allowLambda
+			p.allowLambda = false
 			arm.Guard = p.parseExpression(LOWEST)
+			p.allowLambda = prevAllowLambda
 		}
 
 		if !p.expectPeek(token.ARROW) {
