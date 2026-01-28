@@ -22,7 +22,7 @@ Features:
 
 Run with:
 ```bash
-cat examples/nico/fibonacci_sequence.k | ./karl run -
+cat examples/contrib/nico/fibonacci_sequence.k | ./karl run -
 ```
 
 ### 2. prime_sieve.k
@@ -44,7 +44,7 @@ Features:
 
 Run with:
 ```bash
-cat examples/nico/prime_sieve.k | ./karl run -
+cat examples/contrib/nico/prime_sieve.k | ./karl run -
 ```
 
 ### 3. text_analyzer.k
@@ -67,7 +67,7 @@ Features:
 
 Run with:
 ```bash
-cat examples/nico/text_analyzer.k | ./karl run -
+cat examples/contrib/nico/text_analyzer.k | ./karl run -
 ```
 
 ### 4. matrix_operations.k
@@ -90,7 +90,7 @@ Features:
 
 Run with:
 ```bash
-cat examples/nico/matrix_operations.k | ./karl run -
+cat examples/contrib/nico/matrix_operations.k | ./karl run -
 ```
 
 ### 5. collatz_conjecture.k
@@ -112,7 +112,7 @@ Features:
 
 Run with:
 ```bash
-cat examples/nico/collatz_conjecture.k | ./karl run -
+cat examples/contrib/nico/collatz_conjecture.k | ./karl run -
 ```
 
 ### 6. sorting_algorithms.k
@@ -134,7 +134,7 @@ Features:
 
 Run with:
 ```bash
-cat examples/nico/sorting_algorithms.k | ./karl run -
+cat examples/contrib/nico/sorting_algorithms.k | ./karl run -
 ```
 
 ### 7. pascal_triangle.k
@@ -156,7 +156,7 @@ Features:
 
 Run with:
 ```bash
-cat examples/nico/pascal_triangle.k | ./karl run -
+cat examples/contrib/nico/pascal_triangle.k | ./karl run -
 ```
 
 ### 8. number_theory.k
@@ -178,7 +178,7 @@ Features:
 
 Run with:
 ```bash
-cat examples/nico/number_theory.k | ./karl run -
+cat examples/contrib/nico/number_theory.k | ./karl run -
 ```
 
 ## Key Karl Features Demonstrated

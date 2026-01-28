@@ -29,6 +29,10 @@ Each example is intended to be standalone and to demonstrate one specific featur
 - `examples/features/query_basic.k` - query expressions
 - `examples/features/equality.k` - `==` vs `eqv`
 
+## Community Examples
+
+- `examples/contrib/nico/README.md` - extended example programs (by Nico)
+
 ## Programs
 
 - `examples/programs/loops_and_functions.k`

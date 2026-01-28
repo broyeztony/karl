@@ -38,14 +38,10 @@ let is_deficient = (n) -> {
 // Classify a number
 let classify_number = (n) -> {
     let sum_divs = sum_proper_divisors(n)
-    if sum_divs == n {
-        "perfect"
-    } else {
-        if sum_divs > n {
-            "abundant"
-        } else {
-            "deficient"
-        }
+    match sum_divs {
+        case _ if sum_divs == n -> "perfect"
+        case _ if sum_divs > n -> "abundant"
+        case _ -> "deficient"
     }
 }
 
