@@ -31,7 +31,7 @@ Each example is intended to be standalone and to demonstrate one specific featur
 
 ## Community Examples
 
-- `examples/contrib/nico/README.md` - extended example programs (by Nico)
+- `examples/contrib/nico/README.md` - extended example programs (by [Nico](http://github.com/hellonico))
 
 ## Programs
 
