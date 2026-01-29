@@ -62,6 +62,8 @@ let task = & ping()
 wait task
 ```
 
+Explore more examples in the `examples/` folder: [Karl Examples](examples/README.md)
+
 ### CLI
 
 ```
@@ -74,12 +76,6 @@ cat <file.k> | karl run -
 
 ```
 go test ./...
-```
-
-If your environment blocks the default Go build cache, run:
-
-```
-GOCACHE=$(pwd)/.go-cache go test ./...
 ```
 
 ### Specs
