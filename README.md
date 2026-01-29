@@ -3,6 +3,13 @@
 
 ### The Karl programming language
 
+<figure>
+  <img src="assets/vscode.png" alt="Visual Studio Code plugin for Karl">
+  <figcaption>Visual Studio Code plugin for Karl</figcaption>
+</figure>
+
+#### Tour of Karl
+
 ```
 // Closures as first-class expressions.
 let addN = n -> x -> n + x
