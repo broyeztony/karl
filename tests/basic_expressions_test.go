@@ -332,6 +332,22 @@ func TestExpressionKinds(t *testing.T) {
 			},
 		},
 		{
+			name:  "as_expression",
+			input: "decodeJson(raw) as HttpResponse",
+			assert: func(t *testing.T, expr ast.Expression) {
+				ae, ok := expr.(*ast.AsExpression)
+				if !ok {
+					t.Fatalf("expected AsExpression, got %T", expr)
+				}
+				if _, ok := ae.Value.(*ast.CallExpression); !ok {
+					t.Fatalf("expected call on left, got %T", ae.Value)
+				}
+				if _, ok := ae.Shape.(*ast.Identifier); !ok {
+					t.Fatalf("expected identifier shape, got %T", ae.Shape)
+				}
+			},
+		},
+		{
 			name:  "recover_expression",
 			input: `decodeJson("{}") ? { foo: "bar", }`,
 			assert: func(t *testing.T, expr ast.Expression) {
@@ -341,6 +357,19 @@ func TestExpressionKinds(t *testing.T) {
 				}
 				if _, ok := re.Target.(*ast.CallExpression); !ok {
 					t.Fatalf("expected CallExpression target, got %T", re.Target)
+				}
+			},
+		},
+		{
+			name:  "recover_expression_after_as",
+			input: `decodeJson(raw) as HttpResponse ? { headers: { acceptEncoding: "gzip", }, }`,
+			assert: func(t *testing.T, expr ast.Expression) {
+				re, ok := expr.(*ast.RecoverExpression)
+				if !ok {
+					t.Fatalf("expected RecoverExpression, got %T", expr)
+				}
+				if _, ok := re.Target.(*ast.AsExpression); !ok {
+					t.Fatalf("expected AsExpression target, got %T", re.Target)
 				}
 			},
 		},

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"karl/ast"
+	"karl/shape"
 	"strings"
 	"sync"
 )
@@ -22,6 +23,7 @@ const (
 	OBJECT  ValueType = "OBJECT"
 	MAP     ValueType = "MAP"
 	SET     ValueType = "SET"
+	SHAPE   ValueType = "SHAPE"
 	FUNC    ValueType = "FUNCTION"
 	BUILTIN ValueType = "BUILTIN"
 	TASK    ValueType = "TASK"
@@ -109,6 +111,7 @@ func (a *Array) Inspect() string {
 
 type Object struct {
 	Pairs map[string]Value
+	Shape *shape.Type
 }
 
 func (o *Object) Type() ValueType { return OBJECT }

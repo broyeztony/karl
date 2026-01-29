@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"karl/ast"
@@ -37,6 +38,13 @@ func (e *Evaluator) evalImportExpression(node *ast.ImportExpression, _ *Environm
 	path, err := e.resolveImportPath(node.Path.Value)
 	if err != nil {
 		return nil, nil, &RuntimeError{Message: "import path error: " + err.Error()}
+	}
+	if strings.HasSuffix(path, ".shape") {
+		sh, err := e.loadShape(path)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &ShapeValue{Name: sh.Name, Shape: sh.Type}, nil, nil
 	}
 	module, err := e.loadModule(path)
 	if err != nil {

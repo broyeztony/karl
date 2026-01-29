@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"karl/shape"
 	"math"
 	"math/rand"
 	"net/http"
@@ -511,11 +512,17 @@ func encodeJSONValue(value Value) (interface{}, error) {
 	case *Object:
 		out := make(map[string]interface{}, len(v.Pairs))
 		for k, val := range v.Pairs {
+			key := k
+			if v.Shape != nil {
+				if alias, ok := shape.AliasFor(v.Shape, k); ok {
+					key = alias
+				}
+			}
 			enc, err := encodeJSONValue(val)
 			if err != nil {
 				return nil, err
 			}
-			out[k] = enc
+			out[key] = enc
 		}
 		return out, nil
 	case *ModuleObject:
