@@ -71,6 +71,17 @@ wait task
 
 Explore more examples in the `examples/` folder: [Karl Examples](examples/README.md)
 
+### Get Karl
+
+Grab a prebuilt binary from GitHub Releases:
+[Releases](https://github.com/broyeztony/Karl/releases)
+
+Or build from source:
+
+```
+go build -o karl .
+```
+
 ### CLI
 
 ```
