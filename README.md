@@ -46,7 +46,7 @@ let { title, bpm, } = track; // semicolon prevents parser error before ...
 ```
 
 ```
-// 5) `for` is an expression; `then` returns the loop value.
+// `for` is an expression; `then` returns the loop value.
 let nums = [1, 2, 3, 4]
 let sum = for i < nums.length with i = 0, acc = 0 {
     acc += nums[i]
@@ -56,14 +56,14 @@ sum
 ```
 
 ```
-// 6) Recoverable errors with `? { ... }`.
+// Recoverable errors with `? { ... }`.
 let raw = "{ \"bpm\": 120 }"
 let data = decodeJson(raw) ? { bpm: 90, }
 data.bpm
 ```
 
 ```
-// 7) Async tasks (`&`) and `wait`.
+// Async tasks (`&`) and `wait`.
 let ping = () -> { sleep(30); "ready" }
 let task = & ping()
 wait task
