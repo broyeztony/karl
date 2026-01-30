@@ -4,6 +4,9 @@ Shapes define *record-like* object structures for external data (JSON, HTTP, fil
 They keep Karl objects as fixed-field records while supporting alias mapping for external keys
 (e.g., `X-Amzn-Trace-Id` -> `xAmznTraceId`).
 
+> Draft note: this spec includes a **codec-mapping** sketch (Option 4) for
+> multi-format translation. It is for reasoning only and not implemented yet.
+
 ## Goals
 
 - Preserve objects as **identifier-keyed records**.
@@ -163,6 +166,183 @@ When a value carries shape metadata (from `as`), `encodeJson` should:
 
 This enables round-trip JSON where external keys like `User Agent`
 map to internal `userAgent` and back.
+
+// ============================================
+// Codec Mappings (Draft / Reasoning)
+// ============================================
+
+Single-field aliases are not enough when formats disagree on valid key names.
+To keep one shape usable across **multiple codecs**, we propose **codec mapping blocks**
+that live alongside shape definitions.
+
+### Syntax (draft)
+
+```
+codec <format> <ShapeName>
+    path = "externalKey"
+```
+
+- `format` is a codec identifier: `json`, `yaml`, `csv`, `tsv`, `query`, `headers`, ...
+- `ShapeName` is a top-level shape in the same file.
+- `path` is a **dot-separated field path** (nested objects).
+- `externalKey` is the key name used by that codec.
+
+### Example shapes + mappings
+
+```
+User : object
+    + id        : string
+    + name      : object
+        + first : string
+        + last  : string
+    - email     : string
+    - locale    : string
+    + userAgent : string
+
+OrderList : object[]
+    + id       : string
+    + amount   : float
+    + currency : string
+    - note     : string
+
+codec json User
+    id         = "id"
+    name.first = "first_name"
+    name.last  = "last_name"
+    email      = "email"
+    locale     = "locale"
+    userAgent  = "User Agent"
+
+codec query User
+    id         = "user_id"
+    name.first = "first"
+    name.last  = "last"
+    email      = "email"
+    locale     = "lang"
+    userAgent  = "user_agent"
+
+codec yaml User
+    id         = "id"
+    name.first = "first"
+    name.last  = "last"
+    email      = "email"
+    locale     = "locale"
+    userAgent  = "user_agent"
+
+codec csv OrderList
+    id       = "id"
+    amount   = "amount"
+    currency = "currency"
+    note     = "note"
+
+codec tsv OrderList
+    id       = "id"
+    amount   = "amount"
+    currency = "currency"
+    note     = "note"
+```
+
+### Intended semantics (draft)
+
+- `decode(text, codec, Shape)`:
+  1) Decode text into a raw value.
+  2) Apply the shape.
+  3) Use codec mappings to translate external keys → internal fields.
+
+- `encode(value, codec, Shape)`:
+  1) Apply the shape.
+  2) Use codec mappings to translate internal fields → external keys.
+  3) Encode to the target format.
+
+- If a path is missing in a codec block, use the **internal field name**.
+- If a codec block is absent for a shape, use internal field names for all paths.
+
+### End-to-end translation examples (draft)
+
+Assume builtins (not implemented yet):
+```
+decode(text, codec, Shape?)
+encode(value, codec, Shape?)
+```
+
+Inputs:
+
+```
+let userJson = "{ \"id\": \"u1\", \"first_name\": \"Ada\", \"last_name\": \"Lovelace\", \"email\": \"ada@karl.dev\", \"locale\": \"en\", \"User Agent\": \"Karl/1.0\" }"
+let userYaml = "id: u1\nfirst: Ada\nlast: Lovelace\nemail: ada@karl.dev\nlocale: en\nuser_agent: Karl/1.0\n"
+let ordersJson = "[{ \"id\": \"o1\", \"amount\": 10.5, \"currency\": \"USD\" }, { \"id\": \"o2\", \"amount\": 7.0, \"currency\": \"EUR\", \"note\": \"gift\" }]"
+let ordersCsv = "id,amount,currency,note\no1,10.5,USD,\no2,7.0,EUR,gift\n"
+let ordersTsv = "id\tamount\tcurrency\tnote\no1\t10.5\tUSD\t\no2\t7.0\tEUR\tgift\n"
+```
+
+Translations:
+
+1) JSON → CSV (OrderList)
+```
+let orders = decode(ordersJson, "json", OrderList)
+let csv = encode(orders, "csv", OrderList)
+```
+
+2) JSON → YAML (User)
+```
+let user = decode(userJson, "json", User)
+let yaml = encode(user, "yaml", User)
+```
+
+3) JSON → Query (User)
+```
+let user = decode(userJson, "json", User)
+let query = encode(user, "query", User)
+```
+
+4) YAML → JSON (User)
+```
+let user = decode(userYaml, "yaml", User)
+let json = encode(user, "json", User)
+```
+
+5) CSV → YAML (OrderList)
+```
+let orders = decode(ordersCsv, "csv", OrderList)
+let yaml = encode(orders, "yaml", OrderList)
+```
+
+6) TSV → CSV (OrderList)
+```
+let orders = decode(ordersTsv, "tsv", OrderList)
+let csv = encode(orders, "csv", OrderList)
+```
+
+7) CSV → JSON (OrderList)
+```
+let orders = decode(ordersCsv, "csv", OrderList)
+let json = encode(orders, "json", OrderList)
+```
+
+### Transform in between (draft)
+
+Decoding yields a shaped object, so you can transform it with normal Karl code
+before encoding into a different format.
+
+Example (User → YAML):
+```
+let user = decode(userJson, "json", User)
+user.locale = "fr"
+user.name.last = user.name.last.toUpper()
+let out = encode(user, "yaml", User)
+```
+
+Example (OrderList → JSON with discounts):
+```
+let orders = decode(ordersCsv, "csv", OrderList)
+let discounted = for orders with i = 0, out = [] {
+    let o = orders[i]
+    o.amount = o.amount * 0.9
+    out += [o]
+    i++
+} then out
+let json = encode(discounted, "json", OrderList)
+```
 
 ## Example
 
