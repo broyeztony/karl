@@ -88,6 +88,7 @@ const (
 	SELECT   = "SELECT"
 	STEP     = "STEP"
 	WAIT     = "WAIT"
+	AS       = "AS"
 )
 
 var keywords = map[string]TokenType{
@@ -112,6 +113,7 @@ var keywords = map[string]TokenType{
 	"select":   SELECT,
 	"eqv":      EQV,
 	"wait":     WAIT,
+	"as":       AS,
 }
 
 func LookupIdent(ident string) TokenType {
