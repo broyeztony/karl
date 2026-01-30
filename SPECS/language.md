@@ -374,6 +374,8 @@ let keys = counts.keys()                 // array of keys (order not guaranteed)
 let values = counts.values()             // array of values (order not guaranteed)
 
 // Map key types: string, char, int, bool.
+// Access JSON keys that aren't identifiers with jsonPath:
+// let ua = jsonPath(body, "headers['User-Agent']")
 
 // ============================================
 // 9.5 SET EXPRESSIONS

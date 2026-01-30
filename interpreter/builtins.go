@@ -38,6 +38,7 @@ func RegisterBuiltins() {
 	builtins["http"] = &Builtin{Name: "http", Fn: builtinHTTP}
 	builtins["encodeJson"] = &Builtin{Name: "encodeJson", Fn: builtinEncodeJSON}
 	builtins["decodeJson"] = &Builtin{Name: "decodeJson", Fn: builtinDecodeJSON}
+	builtins["jsonPath"] = &Builtin{Name: "jsonPath", Fn: builtinJSONPath}
 	builtins["then"] = &Builtin{Name: "then", Fn: builtinThen}
 	builtins["send"] = &Builtin{Name: "send", Fn: builtinSend}
 	builtins["recv"] = &Builtin{Name: "recv", Fn: builtinRecv}

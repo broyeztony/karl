@@ -8,11 +8,8 @@ let parsed = decodeJson(raw) as HttpResponse ? {
     log("Shaping error", error)
     { status: 0, headers: { acceptEncoding: "identity", }, }
 }
-
 log("parsed:", parsed)
 
 parsed.headers.acceptEncoding = "deflate"
-
 let out = encodeJson(parsed);
-
 log(out)

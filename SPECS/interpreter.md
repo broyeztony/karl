@@ -430,6 +430,7 @@ Implementation details (current runtime):
 - `parseInt(string)` -> Int
 - `encodeJson(value)` -> String
 - `decodeJson(text)` -> Value
+- `jsonPath(value, path)` -> Value or `null`
 - `readFile(path)` -> String
 - `writeFile(path, data)` -> Unit
 - `appendFile(path, data)` -> Unit
