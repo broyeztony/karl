@@ -36,6 +36,10 @@ func RegisterBuiltins() {
 	builtins["exists"] = &Builtin{Name: "exists", Fn: builtinExists}
 	builtins["listDir"] = &Builtin{Name: "listDir", Fn: builtinListDir}
 	builtins["http"] = &Builtin{Name: "http", Fn: builtinHTTP}
+	builtins["JsonCodec"] = &Builtin{Name: "JsonCodec", Fn: builtinJsonCodec}
+	builtins["YamlCodec"] = &Builtin{Name: "YamlCodec", Fn: builtinYamlCodec}
+	builtins["decode"] = &Builtin{Name: "decode", Fn: builtinDecode}
+	builtins["encode"] = &Builtin{Name: "encode", Fn: builtinEncode}
 	builtins["encodeJson"] = &Builtin{Name: "encodeJson", Fn: builtinEncodeJSON}
 	builtins["decodeJson"] = &Builtin{Name: "decodeJson", Fn: builtinDecodeJSON}
 	builtins["jsonPath"] = &Builtin{Name: "jsonPath", Fn: builtinJSONPath}

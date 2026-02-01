@@ -44,13 +44,25 @@ func (e *Evaluator) evalImportExpression(node *ast.ImportExpression, _ *Environm
 		if err != nil {
 			return nil, nil, err
 		}
-		if len(shFile.Shapes) == 1 {
+		if len(shFile.Shapes) == 1 && len(shFile.Codecs) == 0 {
 			sh := shFile.Shapes[0]
 			return &ShapeValue{Name: sh.Name, Shape: sh.Type}, nil, nil
 		}
-		pairs := make(map[string]Value, len(shFile.Shapes))
+		pairs := make(map[string]Value, len(shFile.Shapes)+len(shFile.Codecs))
 		for _, sh := range shFile.Shapes {
 			pairs[sh.Name] = &ShapeValue{Name: sh.Name, Shape: sh.Type}
+		}
+		for _, c := range shFile.Codecs {
+			sh, ok := shFile.ByName[c.ShapeName]
+			if !ok {
+				return nil, nil, &RuntimeError{Message: "codec references unknown shape: " + c.ShapeName}
+			}
+			pairs[c.Name] = &CodecValue{
+				Name:     c.Name,
+				Format:   c.Format,
+				Shape:    sh.Type,
+				Mappings: c.Mappings,
+			}
 		}
 		return &Object{Pairs: pairs}, nil, nil
 	}

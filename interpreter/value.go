@@ -24,6 +24,7 @@ const (
 	MAP     ValueType = "MAP"
 	SET     ValueType = "SET"
 	SHAPE   ValueType = "SHAPE"
+	CODEC   ValueType = "CODEC"
 	FUNC    ValueType = "FUNCTION"
 	BUILTIN ValueType = "BUILTIN"
 	TASK    ValueType = "TASK"

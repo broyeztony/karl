@@ -105,3 +105,47 @@ func TestParseFileUnknownReference(t *testing.T) {
 		t.Fatalf("expected unknown type error")
 	}
 }
+
+func TestParseCodecMappings(t *testing.T) {
+	input := `shape Color : object
+    + name : string
+    + value : string
+
+codec Json Color
+    value <--> "color hexadecimal"
+    name -> "name"
+`
+	file, err := ParseFile(input)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if len(file.Codecs) != 1 {
+		t.Fatalf("expected 1 codec, got %d", len(file.Codecs))
+	}
+	c := file.Codecs[0]
+	if c.Name != "Json" || c.Format != "json" || c.ShapeName != "Color" {
+		t.Fatalf("unexpected codec header: %+v", c)
+	}
+	if len(c.Mappings) != 2 {
+		t.Fatalf("expected 2 mappings, got %d", len(c.Mappings))
+	}
+	if !c.Mappings[0].Decode || !c.Mappings[0].Encode {
+		t.Fatalf("expected bidirectional mapping")
+	}
+	if c.Mappings[0].ExternalPath[0] != "color hexadecimal" {
+		t.Fatalf("expected quoted external segment")
+	}
+}
+
+func TestParseCodecDepthMismatch(t *testing.T) {
+	input := `shape Color : object
+    + value : string
+
+codec Json Color
+    value <--> parent.child
+`
+	_, err := ParseFile(input)
+	if err == nil {
+		t.Fatalf("expected depth mismatch error")
+	}
+}
