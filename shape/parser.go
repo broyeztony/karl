@@ -2,6 +2,7 @@ package shape
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -26,14 +27,55 @@ func ParseFile(content string) (*File, error) {
 		return nil, fmt.Errorf("shape parse error: empty file")
 	}
 
-	file := &File{Shapes: []*Shape{}, ByName: map[string]*Shape{}}
-	var contexts []context
-	var current *Shape
+	file := &File{
+		Shapes:      []*Shape{},
+		ByName:      map[string]*Shape{},
+		Codecs:      []*CodecSpec{},
+		ByCodecName: map[string]*CodecSpec{},
+	}
 
-	for i := 0; i < len(lines); i++ {
+	for i := 0; i < len(lines); {
 		ln := lines[i]
-		if ln.indent == 0 {
-			name, typeStr, err := splitDecl(ln.text)
+		if ln.indent != 0 {
+			return nil, lineError(ln, "unexpected indentation")
+		}
+
+		switch {
+		case strings.HasPrefix(ln.text, "codec "):
+			codec, err := parseCodecHeader(ln.text)
+			if err != nil {
+				return nil, lineError(ln, err.Error())
+			}
+			if _, exists := file.ByCodecName[codec.Name]; exists {
+				return nil, lineError(ln, "duplicate codec name: "+codec.Name)
+			}
+			if _, exists := file.ByName[codec.Name]; exists {
+				return nil, lineError(ln, "codec name conflicts with shape name: "+codec.Name)
+			}
+			if _, ok := file.ByName[codec.ShapeName]; !ok {
+				return nil, lineError(ln, "unknown shape in codec: "+codec.ShapeName)
+			}
+			i++
+			for i < len(lines) && lines[i].indent > 0 {
+				mapLine := lines[i]
+				if mapLine.indent != 4 {
+					return nil, lineError(mapLine, "unexpected indentation")
+				}
+				mapping, err := parseCodecMapping(mapLine.text)
+				if err != nil {
+					return nil, lineError(mapLine, err.Error())
+				}
+				codec.Mappings = append(codec.Mappings, mapping)
+				i++
+			}
+			file.Codecs = append(file.Codecs, codec)
+			file.ByCodecName[codec.Name] = codec
+		default:
+			text := ln.text
+			if strings.HasPrefix(text, "shape ") {
+				text = strings.TrimSpace(strings.TrimPrefix(text, "shape "))
+			}
+			name, typeStr, err := splitDecl(text)
 			if err != nil {
 				return nil, lineError(ln, err.Error())
 			}
@@ -43,40 +85,45 @@ func ParseFile(content string) (*File, error) {
 			if _, exists := file.ByName[name]; exists {
 				return nil, lineError(ln, "duplicate shape name: "+name)
 			}
+			if _, exists := file.ByCodecName[name]; exists {
+				return nil, lineError(ln, "shape name conflicts with codec name: "+name)
+			}
 			rootType, err := parseType(typeStr)
 			if err != nil {
 				return nil, lineError(ln, err.Error())
 			}
-			current = &Shape{Name: name, Type: rootType}
+			current := &Shape{Name: name, Type: rootType}
 			file.Shapes = append(file.Shapes, current)
 			file.ByName[name] = current
-			contexts = []context{}
+
+			contexts := []context{}
 			if obj := ObjectType(rootType); obj != nil {
-				contexts = append(contexts, context{indent: ln.indent + 4, target: obj})
+				contexts = append(contexts, context{indent: 4, target: obj})
 			}
-			continue
-		}
-		if current == nil {
-			return nil, lineError(ln, "field declared outside of a shape")
-		}
-		if len(contexts) == 0 {
-			return nil, lineError(ln, "field declared outside of an object shape")
-		}
-		for len(contexts) > 0 && ln.indent < contexts[len(contexts)-1].indent {
-			contexts = contexts[:len(contexts)-1]
-		}
-		if len(contexts) == 0 || ln.indent != contexts[len(contexts)-1].indent {
-			return nil, lineError(ln, "unexpected indentation")
-		}
-		ctx := contexts[len(contexts)-1]
-		field, fieldType, err := parseField(ln.text)
-		if err != nil {
-			return nil, lineError(ln, err.Error())
-		}
-		field.Type = fieldType
-		ctx.target.Fields = append(ctx.target.Fields, field)
-		if obj := ObjectType(fieldType); obj != nil {
-			contexts = append(contexts, context{indent: ln.indent + 4, target: obj})
+			i++
+			for i < len(lines) && lines[i].indent > 0 {
+				fieldLine := lines[i]
+				if len(contexts) == 0 {
+					return nil, lineError(fieldLine, "field declared outside of an object shape")
+				}
+				for len(contexts) > 0 && fieldLine.indent < contexts[len(contexts)-1].indent {
+					contexts = contexts[:len(contexts)-1]
+				}
+				if len(contexts) == 0 || fieldLine.indent != contexts[len(contexts)-1].indent {
+					return nil, lineError(fieldLine, "unexpected indentation")
+				}
+				ctx := contexts[len(contexts)-1]
+				field, fieldType, err := parseField(fieldLine.text)
+				if err != nil {
+					return nil, lineError(fieldLine, err.Error())
+				}
+				field.Type = fieldType
+				ctx.target.Fields = append(ctx.target.Fields, field)
+				if obj := ObjectType(fieldType); obj != nil {
+					contexts = append(contexts, context{indent: fieldLine.indent + 4, target: obj})
+				}
+				i++
+			}
 		}
 	}
 
@@ -139,6 +186,141 @@ func splitDecl(text string) (string, string, error) {
 		return "", "", fmt.Errorf("invalid declaration")
 	}
 	return name, typeStr, nil
+}
+
+func parseCodecHeader(text string) (*CodecSpec, error) {
+	parts := strings.Fields(text)
+	if len(parts) != 3 || parts[0] != "codec" {
+		return nil, fmt.Errorf("codec header must be: codec <Name> <ShapeName>")
+	}
+	name := parts[1]
+	shapeName := parts[2]
+	if !isIdent(name) {
+		return nil, fmt.Errorf("codec name must be a valid identifier")
+	}
+	if !isIdent(shapeName) {
+		return nil, fmt.Errorf("codec shape name must be a valid identifier")
+	}
+	return &CodecSpec{
+		Name:      name,
+		Format:    strings.ToLower(name),
+		ShapeName: shapeName,
+		Mappings:  []CodecMapping{},
+	}, nil
+}
+
+func parseCodecMapping(text string) (CodecMapping, error) {
+	type opSpec struct {
+		op     string
+		decode bool
+		encode bool
+	}
+	ops := []opSpec{
+		{op: "<-->", decode: true, encode: true},
+		{op: "<->", decode: true, encode: true},
+		{op: "<-", decode: true, encode: false},
+		{op: "->", decode: false, encode: true},
+	}
+	for _, op := range ops {
+		if idx := strings.Index(text, op.op); idx >= 0 {
+			left := strings.TrimSpace(text[:idx])
+			right := strings.TrimSpace(text[idx+len(op.op):])
+			if left == "" || right == "" {
+				return CodecMapping{}, fmt.Errorf("invalid codec mapping")
+			}
+			internal, err := parsePath(left, true)
+			if err != nil {
+				return CodecMapping{}, fmt.Errorf("invalid internal path: %v", err)
+			}
+			external, err := parsePath(right, false)
+			if err != nil {
+				return CodecMapping{}, fmt.Errorf("invalid external path: %v", err)
+			}
+			if len(internal) != len(external) {
+				return CodecMapping{}, fmt.Errorf("codec mapping paths must have same depth")
+			}
+			return CodecMapping{
+				InternalPath: internal,
+				ExternalPath: external,
+				Decode:       op.decode,
+				Encode:       op.encode,
+			}, nil
+		}
+	}
+	return CodecMapping{}, fmt.Errorf("codec mapping must use one of: <--> <-> <- ->")
+}
+
+func parsePath(text string, internal bool) ([]string, error) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return nil, fmt.Errorf("empty path")
+	}
+	segments := []string{}
+	for i := 0; i < len(text); {
+		seg, next, err := parsePathSegment(text, i, internal)
+		if err != nil {
+			return nil, err
+		}
+		segments = append(segments, seg)
+		i = next
+		if i >= len(text) {
+			break
+		}
+		if text[i] != '.' {
+			return nil, fmt.Errorf("unexpected character %q", text[i])
+		}
+		i++
+		if i >= len(text) {
+			return nil, fmt.Errorf("path cannot end with '.'")
+		}
+	}
+	return segments, nil
+}
+
+func parsePathSegment(text string, i int, internal bool) (string, int, error) {
+	if i >= len(text) {
+		return "", i, fmt.Errorf("missing segment")
+	}
+	if text[i] == '"' {
+		j := i + 1
+		for j < len(text) {
+			if text[j] == '\\' {
+				j += 2
+				continue
+			}
+			if text[j] == '"' {
+				raw := text[i : j+1]
+				val, err := strconv.Unquote(raw)
+				if err != nil {
+					return "", i, fmt.Errorf("invalid quoted segment")
+				}
+				if internal && !isIdent(val) {
+					return "", i, fmt.Errorf("internal segments must be identifiers")
+				}
+				return val, j + 1, nil
+			}
+			j++
+		}
+		return "", i, fmt.Errorf("unterminated quoted segment")
+	}
+	j := i
+	for j < len(text) && text[j] != '.' {
+		if text[j] == ' ' || text[j] == '\t' {
+			return "", i, fmt.Errorf("spaces require quoted segments")
+		}
+		j++
+	}
+	seg := text[i:j]
+	if seg == "" {
+		return "", i, fmt.Errorf("empty segment")
+	}
+	if !isIdent(seg) {
+		if internal {
+			return "", i, fmt.Errorf("internal segments must be identifiers")
+		}
+		return "", i, fmt.Errorf("external non-identifier segments must be quoted")
+	}
+	return seg, j, nil
 }
 
 func parseField(text string) (Field, *Type, error) {

@@ -243,6 +243,57 @@ func TestEvalJSONPathArraySegments(t *testing.T) {
 	assertString(t, val, "UA")
 }
 
+func TestEvalShapeCodecDecodeEncode(t *testing.T) {
+	dir := t.TempDir()
+	shapePath := filepath.Join(dir, "color.shape")
+	content := `shape Color : object
+    + name  : string
+    + value : string
+
+codec Json Color
+    value <--> "color hexadecimal"
+
+codec Yaml Color
+    value <--> "color-hexadecimal"
+`
+	if err := os.WriteFile(shapePath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write shape file: %v", err)
+	}
+	input := fmt.Sprintf(`let colors = import %q
+let j = "{ \"name\": \"red\", \"color hexadecimal\": \"#f00\" }"
+let nativeKarlObj = decode(j, colors.Json) as colors.Color
+nativeKarlObj.value = "#FF0000"
+encode(nativeKarlObj, colors.Yaml)`, shapePath)
+	val := mustEval(t, input)
+	assertString(t, val, "color-hexadecimal: \"#FF0000\"\nname: \"red\"")
+}
+
+func TestEvalDefaultYamlCodec(t *testing.T) {
+	val := mustEval(t, `let y = "name: red\nvalue: \"#f00\"\n"; let yaml = YamlCodec(); let o = decode(y, yaml); encode(o, yaml)`)
+	assertString(t, val, "name: \"red\"\nvalue: \"#f00\"")
+}
+
+func TestEvalUserDefinedYamlCodecDecode(t *testing.T) {
+	dir := t.TempDir()
+	shapePath := filepath.Join(dir, "color.shape")
+	content := `shape Color : object
+    + name  : string
+    + value : string
+
+codec Yaml Color
+    value <--> "color-hexadecimal"
+`
+	if err := os.WriteFile(shapePath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write shape file: %v", err)
+	}
+	input := fmt.Sprintf(`let colors = import %q
+let y = "name: red\ncolor-hexadecimal: \"#f00\"\n"
+let nativeKarlObj = decode(y, colors.Yaml) as colors.Color
+nativeKarlObj.value`, shapePath)
+	val := mustEval(t, input)
+	assertString(t, val, "#f00")
+}
+
 func TestEvalFailRecover(t *testing.T) {
 	val := mustEval(t, `fail("nope") ? { "fallback" }`)
 	assertString(t, val, "fallback")

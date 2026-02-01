@@ -39,11 +39,30 @@ type Shape struct {
 	Type *Type
 }
 
+// CodecMapping maps a shape path to a codec path.
+// Paths must have the same depth.
+type CodecMapping struct {
+	InternalPath []string
+	ExternalPath []string
+	Decode       bool
+	Encode       bool
+}
+
+// CodecSpec describes a codec mapping block for a shape.
+type CodecSpec struct {
+	Name      string
+	Format    string
+	ShapeName string
+	Mappings  []CodecMapping
+}
+
 // File is the parsed representation of a .shape file.
 // It may contain multiple top-level shapes.
 type File struct {
-	Shapes []*Shape
-	ByName map[string]*Shape
+	Shapes      []*Shape
+	ByName      map[string]*Shape
+	Codecs      []*CodecSpec
+	ByCodecName map[string]*CodecSpec
 }
 
 // ObjectType returns the underlying object type used for fields,
