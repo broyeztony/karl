@@ -71,6 +71,20 @@ wait task
 
 Explore more examples in the `examples/` folder: [Karl Examples](examples/README.md)
 
+#### Workflow examples (contrib by [Nico](https://github.com/hellonico))
+
+The `examples/contrib/workflow/` folder is a small workflow engine and a set of demos built on top of it:
+
+- `engine.k` — core workflow runner (sequential, parallel, DAG)
+- `quickstart.k` — smallest end‑to‑end example
+- `examples.k` — multiple workflow variants in one file
+- `dag_pipeline.k` — large, multi‑stage data pipeline
+- `subdag_demo.k` — composing workflows with sub‑DAGs
+- `csv_pipeline.k` — data pipeline with validation + stats
+- `file_watcher.k` — event‑driven workflow on file changes
+- `timer_tasks.k` — scheduled/recurring task demos
+- `test_simple_dag.k` — minimal DAG sanity check
+
 ### Get Karl
 
 Grab a prebuilt binary from GitHub Releases:
