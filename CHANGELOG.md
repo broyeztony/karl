@@ -2,6 +2,20 @@
 
 All notable changes to Karl are documented here.
 
+## [v0.3.2] - 2026-02-03
+
+Highlights:
+- Added buffered channels via `buffered(size)`.
+- Added `channel()` as an alias for `rendezvous()`.
+- CLI no longer prints `()` when the program result is `Unit`.
+
+Docs & examples:
+- Documented `channel()` alias in specs and examples.
+- Added a buffered channels feature example.
+
+Developer:
+- Ignore `.vscode/` in `.gitignore`.
+
 ## [v0.3.1] - 2026-02-03
 
 Highlights:
