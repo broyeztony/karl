@@ -188,8 +188,8 @@ let executeParallel = (tasks, context, config) -> {
         
         let parallelExecutor = ParallelModule.createParallelExecutor({
             workerCount: config.workerCount,
-            queueSize: if config.queueSize != null { config.queueSize } else { 100 },
-            batchSize: if config.batchSize != null { config.batchSize } else { 10 },
+            queueSize: config.queueSize,
+            batchSize: null,  // Will use default
             enableMetrics: config.enableMetrics,
         })
         
@@ -641,6 +641,8 @@ let mergeConfig = (userConfig) -> {
         retryPolicy: userConfig.retryPolicy,
         useWorkerPool: userConfig.useWorkerPool,
         workerCount: userConfig.workerCount,
+        queueSize: userConfig.queueSize,
+        batchSize: userConfig.batchSize,
         enableMetrics: userConfig.enableMetrics,
         enablePersistence: userConfig.enablePersistence,
         workflowId: userConfig.workflowId,

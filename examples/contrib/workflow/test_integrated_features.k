@@ -113,6 +113,7 @@ let poolConfig = {
     useWorkerPool: true,
     workerCount: 4,
     queueSize: 100,
+    batchSize: 10,
     enableMetrics: true,
     enablePersistence: false,
     workflowId: null,
