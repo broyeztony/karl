@@ -188,6 +188,8 @@ let executeParallel = (tasks, context, config) -> {
         
         let parallelExecutor = ParallelModule.createParallelExecutor({
             workerCount: config.workerCount,
+            queueSize: if config.queueSize != null { config.queueSize } else { 100 },
+            batchSize: if config.batchSize != null { config.batchSize } else { 10 },
             enableMetrics: config.enableMetrics,
         })
         
