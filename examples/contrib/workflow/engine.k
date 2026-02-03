@@ -647,4 +647,32 @@ let execute = (workflow, context, config) -> {
     }
 }
 
-log("Workflow Engine Module Loaded!")
+// ----------------------------------------------------------------------------
+// MODULE EXPORT
+// ----------------------------------------------------------------------------
+
+// Export module as a function (Karl module pattern)
+let makeModule = () -> {
+    {
+        // Main execution function
+        execute: execute,
+        
+        // Execution modes
+        executeSequential: executeSequential,
+        executeParallel: executeParallel,
+        executeDAG: executeDAG,
+        executeDAGWithSubDAGs: executeDAGWithSubDAGs,
+        executePipeline: executePipeline,
+        executeTimerTask: executeTimerTask,
+        executeIntervalTask: executeIntervalTask,
+        
+        // Sub-DAG support
+        createSubDAG: createSubDAG,
+        flattenSubDAGs: flattenSubDAGs,
+        
+        // Configuration
+        defaultConfig: defaultConfig,
+    }
+}
+
+makeModule

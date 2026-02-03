@@ -339,7 +339,7 @@ let createRetryEngine = (policy) -> {
 // ----------------------------------------------------------------------------
 
 // Export module as a function (Karl module pattern)
-() -> {
+let makeModule = () -> {
     {
         // Constants
         RETRY_FIXED: RETRY_FIXED,
@@ -363,3 +363,5 @@ let createRetryEngine = (policy) -> {
         createCustomRetryPolicy: createCustomRetryPolicy,
     }
 }
+
+makeModule

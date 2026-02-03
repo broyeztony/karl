@@ -331,7 +331,7 @@ let createStorageEngine = (config) -> {
 // ----------------------------------------------------------------------------
 
 // Export module as a function (Karl module pattern)
-() -> {
+let makeModule = () -> {
     {
         // Functions
         createStorageEngine: createStorageEngine,
@@ -347,3 +347,5 @@ let createStorageEngine = (config) -> {
         createInitialState: createInitialState,
     }
 }
+
+makeModule

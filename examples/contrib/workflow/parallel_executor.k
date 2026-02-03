@@ -392,7 +392,7 @@ let createParallelExecutor = (config) -> {
 // ----------------------------------------------------------------------------
 
 // Export module as a function (Karl module pattern)
-() -> {
+let makeModule = () -> {
     {
         // Functions
         createWorkerPool: createWorkerPool,
@@ -405,3 +405,5 @@ let createParallelExecutor = (config) -> {
         defaultPoolConfig: defaultPoolConfig,
     }
 }
+
+makeModule
