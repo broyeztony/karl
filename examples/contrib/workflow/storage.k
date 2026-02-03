@@ -45,7 +45,7 @@ let serializeWorkflowState = (workflowId, state) -> {
 
 // Deserialize workflow state from JSON structure
 let deserializeWorkflowState = (serialized) -> {
-    if !serialized.state {
+    if serialized.state == null {
         { success: false, error: "Invalid state format" }
     } else {
         {
@@ -103,7 +103,7 @@ let loadState = (workflowId, config) -> {
         { success: false, error: "Failed to read state file" }
     }
     
-    if !readResult.success {
+    if readResult.success == false {
         log("[STORAGE] No saved state found for:", workflowId)
         { success: false, error: "No saved state" }
     } else {
@@ -158,7 +158,7 @@ let checkpoint = (workflowId, state, config) -> {
 
 // Auto-checkpoint worker - runs in background
 let startAutoCheckpoint = (workflowId, stateRef, config) -> {
-    if !config.enableAutoCheckpoint {
+    if config.enableAutoCheckpoint == false {
         log("[CHECKPOINT] Auto-checkpoint disabled")
         { success: false, error: "Auto-checkpoint disabled" }
     } else {
@@ -215,7 +215,7 @@ let getIncompleteNodes = (nodes, state) -> {
         let node = nodes[i]
         let isCompleted = state.completedNodes[node.id]
         
-        if !isCompleted {
+        if isCompleted == false {
             incomplete += [node]
         }
         
@@ -243,12 +243,12 @@ let getReadyNodes = (nodes, edges, state) -> {
         let node = nodes[i]
         let isStarted = state.startedNodes[node.id]
         
-        if !isStarted {
+        if isStarted == false {
             let deps = finalDeps[node.id]
             let allDepsMet = true
             
             for j < deps.length with j = 0 {
-                if !state.completedNodes[deps[j]] {
+                if state.completedNodes[deps[j]] == false {
                     allDepsMet = false
                     break allDepsMet
                 }
