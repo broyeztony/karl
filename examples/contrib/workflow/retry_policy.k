@@ -334,4 +334,32 @@ let createRetryEngine = (policy) -> {
     }
 }
 
-log("Retry Policy Module Loaded!")
+// ----------------------------------------------------------------------------
+// MODULE EXPORT
+// ----------------------------------------------------------------------------
+
+// Export module as a function (Karl module pattern)
+() -> {
+    {
+        // Constants
+        RETRY_FIXED: RETRY_FIXED,
+        RETRY_LINEAR: RETRY_LINEAR,
+        RETRY_EXPONENTIAL: RETRY_EXPONENTIAL,
+        CIRCUIT_CLOSED: CIRCUIT_CLOSED,
+        CIRCUIT_OPEN: CIRCUIT_OPEN,
+        CIRCUIT_HALF_OPEN: CIRCUIT_HALF_OPEN,
+        
+        // Functions
+        createRetryEngine: createRetryEngine,
+        createCircuitBreaker: createCircuitBreaker,
+        executeWithRetry: executeWithRetry,
+        calculateDelay: calculateDelay,
+        isRetryableError: isRetryableError,
+        
+        // Policy builders
+        createFixedRetryPolicy: createFixedRetryPolicy,
+        createLinearRetryPolicy: createLinearRetryPolicy,
+        createExponentialRetryPolicy: createExponentialRetryPolicy,
+        createCustomRetryPolicy: createCustomRetryPolicy,
+    }
+}

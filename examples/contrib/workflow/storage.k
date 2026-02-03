@@ -326,4 +326,24 @@ let createStorageEngine = (config) -> {
     }
 }
 
-log("Workflow Storage Module Loaded!")
+// ----------------------------------------------------------------------------
+// MODULE EXPORT
+// ----------------------------------------------------------------------------
+
+// Export module as a function (Karl module pattern)
+() -> {
+    {
+        // Functions
+        createStorageEngine: createStorageEngine,
+        serializeState: serializeState,
+        deserializeState: deserializeState,
+        saveState: saveState,
+        loadState: loadState,
+        deleteState: deleteState,
+        checkpoint: checkpoint,
+        canResume: canResume,
+        getIncompleteNodes: getIncompleteNodes,
+        getReadyNodes: getReadyNodes,
+        createInitialState: createInitialState,
+    }
+}

@@ -11,10 +11,15 @@
 // - Status tracking and result aggregation
 // ============================================================================
 
-// Import enhanced modules
-import "./retry_policy.k" as RetryModule
-import "./parallel_executor.k" as ParallelModule
-import "./storage.k" as StorageModule
+// Import enhanced modules (relative paths)
+let makeRetry = import "examples/contrib/workflow/retry_policy.k"
+let RetryModule = makeRetry()
+
+let makeParallel = import "examples/contrib/workflow/parallel_executor.k"
+let ParallelModule = makeParallel()
+
+let makeStorage = import "examples/contrib/workflow/storage.k"
+let StorageModule = makeStorage()
 
 // ----------------------------------------------------------------------------
 // TIMER TASK SUPPORT

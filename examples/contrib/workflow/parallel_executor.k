@@ -387,4 +387,21 @@ let createParallelExecutor = (config) -> {
     }
 }
 
-log("Parallel Executor Module Loaded!")
+// ----------------------------------------------------------------------------
+// MODULE EXPORT
+// ----------------------------------------------------------------------------
+
+// Export module as a function (Karl module pattern)
+() -> {
+    {
+        // Functions
+        createWorkerPool: createWorkerPool,
+        createParallelExecutor: createParallelExecutor,
+        executeParallelWithPool: executeParallelWithPool,
+        executeWithLoadBalancing: executeWithLoadBalancing,
+        executeWithBatching: executeWithBatching,
+        
+        // Configuration
+        defaultPoolConfig: defaultPoolConfig,
+    }
+}
