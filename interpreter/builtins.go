@@ -20,6 +20,7 @@ func RegisterBuiltins() {
 	builtins["exit"] = &Builtin{Name: "exit", Fn: builtinExit}
 	builtins["fail"] = &Builtin{Name: "fail", Fn: builtinFail}
 	builtins["rendezvous"] = &Builtin{Name: "rendezvous", Fn: builtinChannel}
+	builtins["channel"] = &Builtin{Name: "channel", Fn: builtinChannel}
 	builtins["buffered"] = &Builtin{Name: "buffered", Fn: builtinBufferedChannel}
 	builtins["sleep"] = &Builtin{Name: "sleep", Fn: builtinSleep}
 	builtins["log"] = &Builtin{Name: "log", Fn: builtinLog}
