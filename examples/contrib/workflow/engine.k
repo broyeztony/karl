@@ -296,7 +296,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
     let completionChan = rendezvous()
     
     // Initialize or restore state
-    let completedNodes = if resumeState {
+    let completedNodes = if resumeState != null {
         resumeState.completedNodes
     } else {
         for i < nodes.length with i = 0, comp = {} {
@@ -305,7 +305,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
         } then comp
     }
     
-    let startedNodes = if resumeState {
+    let startedNodes = if resumeState != null {
         resumeState.startedNodes
     } else {
         for i < nodes.length with i = 0, started = {} {
@@ -314,7 +314,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
         } then started
     }
     
-    let initialTotalCompleted = if resumeState { resumeState.totalCompleted } else { 0 }
+    let initialTotalCompleted = if resumeState != null { resumeState.totalCompleted } else { 0 }
     
     // Find nodes with no dependencies (or ready nodes if resuming) and start them
     for i < nodes.length with i = 0 {
@@ -350,7 +350,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
     } then {}
     
     // Collect results
-    let initialResults = if resumeState {
+    let initialResults = if resumeState != null {
         resumeState.results
     } else {
         for i < nodes.length with i = 0, res = {} {
