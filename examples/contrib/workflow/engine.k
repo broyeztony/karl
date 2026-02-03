@@ -284,15 +284,15 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
     }
     
     // Build adjacency map for dependencies
-    let dependencies = for i < nodes.length with i = 0, deps = {} {
-        deps[nodes[i].id] = []
+    let dependencies = for i < nodes.length with i = 0, deps = map() {
+        deps = deps.set(nodes[i].id, [])
         i = i + 1
     } then deps
     
     let finalDeps = for i < edges.length with i = 0, deps = dependencies {
         let edge = edges[i]
-        let currentDeps = deps[edge.target]
-        deps[edge.target] = currentDeps + [edge.source]
+        let currentDeps = deps.get(edge.target)
+        deps = deps.set(edge.target, currentDeps + [edge.source])
         i = i + 1
     } then deps
     
@@ -303,8 +303,8 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
     let completedNodes = if resumeState != null {
         resumeState.completedNodes
     } else {
-        for i < nodes.length with i = 0, comp = {} {
-            comp[nodes[i].id] = false
+        for i < nodes.length with i = 0, comp = map() {
+            comp = comp.set(nodes[i].id, false)
             i = i + 1
         } then comp
     }
@@ -312,8 +312,8 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
     let startedNodes = if resumeState != null {
         resumeState.startedNodes
     } else {
-        for i < nodes.length with i = 0, started = {} {
-            started[nodes[i].id] = false
+        for i < nodes.length with i = 0, started = map() {
+            started = started.set(nodes[i].id, false)
             i = i + 1
         } then started
     }
@@ -324,12 +324,12 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
     for i < nodes.length with i = 0 {
         let node = nodes[i]
         
-        if !startedNodes[node.id] {
-            let deps = finalDeps[node.id]
+        if !startedNodes.get(node.id) {
+            let deps = finalDeps.get(node.id)
             let allDepsMet = true
             
             for j < deps.length with j = 0 {
-                if !completedNodes[deps[j]] {
+                if !completedNodes.get(deps[j]) {
                     allDepsMet = false
                     break allDepsMet
                 }
@@ -337,7 +337,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
             } then allDepsMet
             
             if allDepsMet {
-                startedNodes[node.id] = true
+                startedNodes = startedNodes.set(node.id, true)
                 let task = & (() -> {
                     log("[DAG]", node.id, "- Starting")
                     let result = executeTask(node, initialContext, config)
@@ -357,8 +357,8 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
     let initialResults = if resumeState != null {
         resumeState.results
     } else {
-        for i < nodes.length with i = 0, res = {} {
-            res[nodes[i].id] = null
+        for i < nodes.length with i = 0, res = map() {
+            res = res.set(nodes[i].id, null)
             i = i + 1
         } then res
     }
@@ -374,8 +374,8 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
         log("[DAG]", msg.nodeId, "- Completed")
         
         // Mark as completed
-        comp[msg.nodeId] = true
-        res[msg.nodeId] = msg
+        comp = comp.set(msg.nodeId, true)
+        res = res.set(msg.nodeId, msg)
         totalCompleted = totalCompleted + 1
         checkpointCounter = checkpointCounter + 1
         
@@ -401,11 +401,11 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
         for i < nodes.length with i = 0 {
             let node = nodes[i]
             // If not already completed and dependencies are satisfied, start it
-            if !started[node.id] {
-                let deps = finalDeps[node.id]
+            if !started.get(node.id) {
+                let deps = finalDeps.get(node.id)
                 let ready = true
                 for j < deps.length with j = 0 {
-                    if !comp[deps[j]] {
+                    if !comp.get(deps[j]) {
                         ready = false
                         break ready
                     }
@@ -415,7 +415,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
                 if ready {
                     log("[DAG]", node.id, "- Dependencies satisfied, starting")
                     // Mark as started immediately to prevent double-start
-                    started[node.id] = true
+                    started = started.set(node.id, true)
                     
                     let task = & (() -> {
                         let result = executeTask(node, initialContext, config)
@@ -457,7 +457,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
         workflowId: workflowId,
         results: for i < nodes.length with i = 0, arr = [] {
             let nodeId = nodes[i].id
-            let result = loopResult.results[nodeId]
+            let result = loopResult.results.get(nodeId)
             arr += [result]
             i = i + 1
         } then arr,
