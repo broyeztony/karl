@@ -264,7 +264,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
         null
     }
     
-    let workflowId = if config.workflowId != null { config.workflowId } else { "workflow-" + now() }
+    let workflowId = if config.workflowId != null { config.workflowId } else { "workflow-" + str(now()) }
     
     // Check if we can resume from saved state
     let resumeState = if storage {
