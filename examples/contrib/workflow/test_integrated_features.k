@@ -53,6 +53,15 @@ let retryConfig = {
         maxDelay: 3000,
         jitterEnabled: true,
     },
+    useWorkerPool: false,
+    workerCount: 4,
+    enableMetrics: true,
+    enablePersistence: false,
+    workflowId: null,
+    storageConfig: {
+        storageDir: "./workflow-state",
+        enableAutoCheckpoint: false,
+    },
 }
 
 let retryWorkflow = {
@@ -98,9 +107,16 @@ let poolConfig = {
     defaultRetries: 2,
     defaultWorkers: 3,
     stopOnError: false,
+    retryPolicy: null,
     useWorkerPool: true,
     workerCount: 4,
     enableMetrics: true,
+    enablePersistence: false,
+    workflowId: null,
+    storageConfig: {
+        storageDir: "./workflow-state",
+        enableAutoCheckpoint: false,
+    },
 }
 
 let parallelWorkflow = {
@@ -178,6 +194,10 @@ let persistConfig = {
     defaultRetries: 2,
     defaultWorkers: 3,
     stopOnError: false,
+    retryPolicy: null,
+    useWorkerPool: false,
+    workerCount: 4,
+    enableMetrics: true,
     enablePersistence: true,
     workflowId: "test-dag-001",
     storageConfig: {
@@ -277,10 +297,14 @@ let fullConfig = {
         initialDelay: 100,
         maxDelay: 2000,
     },
+    useWorkerPool: false,
+    workerCount: 4,
+    enableMetrics: true,
     enablePersistence: true,
     workflowId: "complex-etl-001",
     storageConfig: {
         storageDir: "./workflow-state",
+        enableAutoCheckpoint: false,
     },
 }
 
