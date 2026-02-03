@@ -140,7 +140,7 @@ let executeWithRetry = (task, context, policy) -> {
             }
         } else {
             lastResult = result
-            lastError = if result.error { result.error } else { "Unknown error" }
+            lastError = if result.error != null { result.error } else { "Unknown error" }
             
             // Check if error is retryable
             if !isRetryableError(lastError, policy) {
