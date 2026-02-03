@@ -113,7 +113,7 @@ let executeWithRetry = (task, context, policy) -> {
     log("[RETRY] Max attempts:", policy.maxAttempts)
     log("[RETRY] Strategy:", policy.strategy)
     
-    for attempt = 1 with attempt = 1, lastResult = null, lastError = null {
+    for true with attempt = 1, lastResult = null, lastError = null {
         if attempt > policy.maxAttempts {
             log("[RETRY]", task.name, "- Failed after", policy.maxAttempts, "attempts")
             break {
@@ -143,7 +143,7 @@ let executeWithRetry = (task, context, policy) -> {
             lastError = if result.error != null { result.error } else { "Unknown error" }
             
             // Check if error is retryable
-            if !isRetryableError(lastError, policy) {
+            if isRetryableError(lastError, policy) == false {
                 log("[RETRY]", task.name, "- Non-retryable error:", lastError)
                 break {
                     success: false,
@@ -315,7 +315,7 @@ let createCircuitBreaker = (config) -> {
 
 // Create a retry engine instance
 let createRetryEngine = (policy) -> {
-    let finalPolicy = if policy {
+    let finalPolicy = if policy != null {
         createCustomRetryPolicy(policy)
     } else {
         defaultRetryPolicy

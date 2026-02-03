@@ -191,7 +191,7 @@ let createWorkerPool = (config) -> {
         
         // Submit a task to the pool
         submit: (task) -> {
-            if !isRunning {
+            if isRunning == false {
                 log("[POOL] Pool not running")
                 { success: false, error: "Pool not running" }
             } else {
@@ -212,7 +212,7 @@ let createWorkerPool = (config) -> {
         
         // Shutdown the pool
         shutdown: () -> {
-            if !isRunning {
+            if isRunning == false {
                 log("[POOL] Not running")
                 { success: false, error: "Pool not running" }
             } else {
@@ -265,7 +265,7 @@ let executeParallelWithPool = (tasks, context, config) -> {
     
     // Start the pool
     let startResult = pool.start()
-    if !startResult.success {
+    if startResult.success == false {
         log("[PARALLEL] Failed to start pool:", startResult.error)
         { success: false, error: startResult.error }
     } else {

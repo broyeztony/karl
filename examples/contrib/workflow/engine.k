@@ -110,7 +110,7 @@ let executeTask = (task, context, config) -> {
         let maxRetries = config.defaultRetries
         
         for i < maxRetries + 1 with i = 0, result = { success: false, error: "Not executed" }, success = false {
-            if success { break result }
+            if success == true { break result }
             
             let taskResult = task.handler(context) ? {
                 { success: false, error: "Task execution failed" }
@@ -229,7 +229,7 @@ let executeParallel = (tasks, context, config) -> {
         let aggregator = & (() -> {
             for i < tasks.length with i = 0, results = [] {
                 let [val, done] = resultChan.recv()
-                if done { break results }
+                if done == true { break results }
                 
                 results += [val]
                 i = i + 1
@@ -332,7 +332,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
                 j = j + 1
             } then allDepsMet
             
-            if allDepsMet {
+            if allDepsMet == true {
                 startedNodes[node.id] = true
                 let task = & (() -> {
                     log("[DAG]", node.id, "- Starting")
@@ -365,7 +365,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
     // Process completions
     let loopResult = for loop = true with loop = true, totalCompleted = initialTotalCompleted, res = initialResults, comp = initialCompleted, started = initialStarted, checkpointCounter = 0 {
         let [msg, done] = completionChan.recv()
-        if done { break { results: res, completed: comp, totalCompleted: totalCompleted } }
+        if done == true { break { results: res, completed: comp, totalCompleted: totalCompleted } }
         
         log("[DAG]", msg.nodeId, "- Completed")
         
@@ -408,7 +408,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
                     j = j + 1
                 } then ready
                 
-                if ready {
+                if ready == true {
                     log("[DAG]", node.id, "- Dependencies satisfied, starting")
                     // Mark as started immediately to prevent double-start
                     started[node.id] = true
@@ -549,7 +549,7 @@ let executePipeline = (stages, items, config) -> {
             let worker = & (() -> {
                 for processing = true with processing = true, processed = 0 {
                     let [item, done] = inputChan.recv()
-                    if done {
+                    if done == true {
                         processing = false
                         break processed
                     }
