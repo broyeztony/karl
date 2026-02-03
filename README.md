@@ -39,20 +39,33 @@ computed
 ```
 
 ```
-// Destructuring + object literals (trailing comma disambiguate from blocks).
+// Destructuring + object literals (trailing comma disambiguates from blocks).
 let track = { title: "Neon Steps", bpm: 160, }
-let { title, bpm, } = track; // semicolon prevents parser error before ... 
-{ title, bpm, } // ... returning an object literal
+let { title, bpm, } = track
+title + " @ " + str(bpm)
 ```
 
 ```
-// `for` is an expression; `then` returns the loop value.
-let nums = [1, 2, 3, 4]
-let sum = for i < nums.length with i = 0, acc = 0 {
-    acc += nums[i]
+// Truthy/falsy in conditionals.
+let items = []
+let label = if items { "non-empty" } else { "empty" }
+label
+```
+
+```
+// Object indexing for external keys.
+let headers = decodeJson("{\"User-Agent\":\"Karl\"}")
+headers["User-Agent"]
+```
+
+```
+// `for` is an expression; `then` is a default when the loop doesn't break.
+let nums = [3, 5, 8, 9]
+let firstEven = for i < nums.length with i = 0 {
+    if nums[i] % 2 == 0 { break nums[i] }
     i++
-} then acc
-sum
+} then "none"
+firstEven
 ```
 
 ```
@@ -63,10 +76,12 @@ data.bpm
 ```
 
 ```
-// Async tasks (`&`) and `wait`.
-let ping = () -> { sleep(30); "ready" }
-let task = & ping()
-wait task
+// Async tasks (`&`) and channels.
+let ch = channel()
+let producer = & { ch.send("ready"); ch.done() }
+let consumer = & ch.recv()
+wait producer
+wait consumer
 ```
 
 Explore more examples in the `examples/` folder: [Karl Examples](examples/README.md)
