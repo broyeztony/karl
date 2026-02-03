@@ -210,6 +210,107 @@ func TestEvalEncodeDecodeJSON(t *testing.T) {
 	assertEquivalent(t, val, expected)
 }
 
+func TestTruthyFalsyIf(t *testing.T) {
+	input := `
+let m = map()
+let s = set()
+let m2 = map()
+m2.set("a", 1)
+let s2 = set()
+s2.add(1)
+let a = if null { 1 } else { 0 }
+let b = if false { 1 } else { 0 }
+let c = if 0 { 1 } else { 0 }
+let d = if 0.0 { 1 } else { 0 }
+let e = if "" { 1 } else { 0 }
+let f = if [] { 1 } else { 0 }
+let g = if {} { 1 } else { 0 }
+let h = if m { 1 } else { 0 }
+let i = if s { 1 } else { 0 }
+let j = if 1 { 1 } else { 0 }
+let k = if -1 { 1 } else { 0 }
+let l = if 1.5 { 1 } else { 0 }
+let m3 = if "x" { 1 } else { 0 }
+let n = if [1] { 1 } else { 0 }
+let o = if { a: 1 } { 1 } else { 0 }
+let p = if m2 { 1 } else { 0 }
+let q = if s2 { 1 } else { 0 };
+[a, b, c, d, e, f, g, h, i, j, k, l, m3, n, o, p, q]
+`
+	val := mustEval(t, input)
+	expected := &Array{Elements: []Value{
+		&Integer{Value: 0},
+		&Integer{Value: 0},
+		&Integer{Value: 0},
+		&Integer{Value: 0},
+		&Integer{Value: 0},
+		&Integer{Value: 0},
+		&Integer{Value: 0},
+		&Integer{Value: 0},
+		&Integer{Value: 0},
+		&Integer{Value: 1},
+		&Integer{Value: 1},
+		&Integer{Value: 1},
+		&Integer{Value: 1},
+		&Integer{Value: 1},
+		&Integer{Value: 1},
+		&Integer{Value: 1},
+		&Integer{Value: 1},
+	}}
+	assertEquivalent(t, val, expected)
+}
+
+func TestTruthyFalsyNegation(t *testing.T) {
+	val := mustEval(t, `[!null, !0, !"", !42]`)
+	expected := &Array{Elements: []Value{
+		&Boolean{Value: true},
+		&Boolean{Value: true},
+		&Boolean{Value: true},
+		&Boolean{Value: false},
+	}}
+	assertEquivalent(t, val, expected)
+}
+
+func TestTruthyFalsyLogicalOperators(t *testing.T) {
+	val := mustEval(t, `[0 || 1, 1 || 0, 0 && 1, 1 && 2]`)
+	expected := &Array{Elements: []Value{
+		&Boolean{Value: true},
+		&Boolean{Value: true},
+		&Boolean{Value: false},
+		&Boolean{Value: true},
+	}}
+	assertEquivalent(t, val, expected)
+}
+
+func TestTruthyFalsyShortCircuit(t *testing.T) {
+	val := mustEval(t, `let a = false && fail("boom"); let b = true || fail("boom"); [a, b]`)
+	expected := &Array{Elements: []Value{
+		&Boolean{Value: false},
+		&Boolean{Value: true},
+	}}
+	assertEquivalent(t, val, expected)
+}
+
+func TestTruthyFalsyForCondition(t *testing.T) {
+	val := mustEval(t, `
+let iterations = for count with count = 2, iter = 0 {
+    iter = iter + 1
+    count = count - 1
+} then iter
+iterations
+`)
+	assertInteger(t, val, 2)
+}
+
+func TestTruthyFalsyMatchGuard(t *testing.T) {
+	val := mustEval(t, `[match 1 { case _ if 0 -> 1 case _ -> 2 }, match 1 { case _ if 1 -> 3 case _ -> 4 }]`)
+	expected := &Array{Elements: []Value{
+		&Integer{Value: 2},
+		&Integer{Value: 3},
+	}}
+	assertEquivalent(t, val, expected)
+}
+
 func TestEvalObjectStringIndexRead(t *testing.T) {
 	val := mustEval(t, `let obj = decodeJson("{\"a-field\": 42}"); obj["a-field"]`)
 	assertInteger(t, val, 42)

@@ -69,15 +69,31 @@ It also notes the current Go implementation status where it diverges.
 
 ### If
 
-- Condition must evaluate to `Bool` (runtime error otherwise).
+- Condition is evaluated using truthy/falsy rules.
 - Returns the chosen branch value.
+
+### Truthy/Falsy
+
+Falsy values:
+- `null`
+- `false`
+- `0` (integer zero)
+- `0.0` (float zero)
+- `""` (empty string)
+- `[]` (empty array)
+- `{}` (empty object)
+- `map()` (empty map)
+- `set()` (empty set)
+
+Everything else is truthy.
+Logical `!`, `&&`, and `||` operate on truthy/falsy and return `Bool`.
 
 ### Match
 
 - Evaluate the scrutinee.
 - Try arms in order:
   - Pattern match.
-  - If a guard exists, evaluate it (must be `Bool`).
+  - If a guard exists, evaluate it; truthy continues, falsy skips.
   - First successful arm produces the result.
 - If no arm matches: runtime error.
 
@@ -87,9 +103,9 @@ Proposed algorithm:
 
 1) Create a loop scope.
 2) Initialize `with` bindings (once).
-3) Evaluate the condition (must be `Bool`, runtime error otherwise).
-4) If true: execute body, then repeat step 3.
-5) If false initially, still execute the `then` block once.
+3) Evaluate the condition using truthy/falsy rules.
+4) If truthy: execute body, then repeat step 3.
+5) If falsy initially, still execute the `then` block once.
 
 **Break/continue**:
 - `continue` skips to the next iteration.
