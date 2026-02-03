@@ -78,7 +78,7 @@ let executeIntervalTask = (intervalTask, context) -> {
         
         results += [result]
         
-        if !result.success {
+        if result.success == false {
             allSuccess = false
         }
         
@@ -320,12 +320,12 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
     for i < nodes.length with i = 0 {
         let node = nodes[i]
         
-        if !startedNodes[node.id] {
+        if startedNodes[node.id] == false {
             let deps = finalDeps[node.id]
             let allDepsMet = true
             
             for j < deps.length with j = 0 {
-                if !completedNodes[deps[j]] {
+                if completedNodes[deps[j]] == false {
                     allDepsMet = false
                     break allDepsMet
                 }
@@ -397,11 +397,11 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
         for i < nodes.length with i = 0 {
             let node = nodes[i]
             // If not already completed and dependencies are satisfied, start it
-            if !started[node.id] {
+            if started[node.id] == false {
                 let deps = finalDeps[node.id]
                 let ready = true
                 for j < deps.length with j = 0 {
-                    if !comp[deps[j]] {
+                    if comp[deps[j]] == false {
                         ready = false
                         break ready
                     }
