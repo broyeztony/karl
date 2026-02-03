@@ -267,7 +267,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
     let workflowId = if config.workflowId != null { config.workflowId } else { "workflow-" + str(now()) }
     
     // Check if we can resume from saved state
-    let resumeState = if storage {
+    let resumeState = if storage != null {
         let resumeCheck = storage.canResume(workflowId)
         if resumeCheck.resumable == true {
             log("[WORKFLOW] Resuming from saved state")
@@ -376,7 +376,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
         checkpointCounter = checkpointCounter + 1
         
         // Checkpoint state periodically if persistence enabled
-        if storage {
+        if storage != null {
             if checkpointCounter >= 5 {  // Checkpoint every 5 completions
                 log("[WORKFLOW] Creating checkpoint...")
                 let currentState = {
@@ -433,7 +433,7 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
     } then { results: res, completed: comp, totalCompleted: totalCompleted }
     
     // Save final state if persistence enabled
-    if storage {
+    if storage != null {
         log("[WORKFLOW] Saving final state...")
         let finalState = {
             completedNodes: loopResult.completed,
