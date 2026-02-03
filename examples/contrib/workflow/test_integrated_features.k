@@ -116,9 +116,6 @@ let duration = now() - startTime
 
 if poolResult.success == true {
     log("\n✅ TEST 2 PASSED: Worker pool executed", computeTasks.length, "tasks in", duration, "ms")
-    if poolResult.metrics != null {
-        log("Worker metrics available:", poolResult.metrics.length, "workers")
-    }
 } else {
     log("\n❌ TEST 2 FAILED")
 }
