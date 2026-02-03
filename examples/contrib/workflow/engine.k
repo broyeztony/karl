@@ -190,6 +190,7 @@ let executeParallel = (tasks, context, config) -> {
             workerCount: config.workerCount,
             queueSize: config.queueSize,
             batchSize: null,  // Will use default
+            enablePriority: config.enablePriority,
             enableMetrics: config.enableMetrics,
         })
         
