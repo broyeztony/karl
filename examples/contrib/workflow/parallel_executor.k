@@ -115,7 +115,7 @@ let createWorker = (workerId, taskChan, resultChan, config) -> {
             metrics.tasksProcessed = metrics.tasksProcessed + 1
             metrics.totalDuration = metrics.totalDuration + duration
             
-            if result.success {
+            if result.success == true {
                 metrics.tasksSucceeded = metrics.tasksSucceeded + 1
                 log("[WORKER", workerId, "] Success:", task.name, "- Duration:", duration, "ms")
             } else {

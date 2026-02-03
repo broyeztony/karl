@@ -56,7 +56,7 @@ let executeTimerTask = (timerTask, context) -> {
         { success: false, error: "Timer task execution failed" }
     }
     
-    if result.success {
+    if result.success == true {
         log("[TIMER]", timerTask.name, "- Completed successfully")
     } else {
         log("[TIMER]", timerTask.name, "- Failed")
@@ -205,7 +205,7 @@ let executeParallel = (tasks, context, config) -> {
                 log("[TASK]", task.name, "- Starting (parallel)")
                 let result = executeTask(task, context, config)
                 
-                if result.success {
+                if result.success == true {
                     log("[TASK]", task.name, "- Success (parallel)")
                 } else {
                     log("[TASK]", task.name, "- Failed (parallel)")
@@ -477,7 +477,7 @@ let createSubDAG = (id, name, nodes, edges) -> {
             log("[SUBDAG]", name, "- Starting with", nodes.length, "nodes")
             let result = executeDAG(nodes, edges, context, context.config)
             
-            if result.success {
+            if result.success == true {
                 log("[SUBDAG]", name, "- Completed successfully")
                 {
                     success: true,
@@ -559,7 +559,7 @@ let executePipeline = (stages, items, config) -> {
                         { success: false, data: null }
                     }
                     
-                    if result.success {
+                    if result.success == true {
                         processed = processed + 1
                         
                         // Send to next stage if exists

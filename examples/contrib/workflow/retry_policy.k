@@ -131,7 +131,7 @@ let executeWithRetry = (task, context, policy) -> {
             { success: false, error: "Task execution failed" }
         }
         
-        if result.success {
+        if result.success == true {
             log("[RETRY]", task.name, "- Success on attempt", attempt)
             break {
                 success: true,
@@ -267,7 +267,7 @@ let createCircuitBreaker = (config) -> {
                 { success: false, error: "Task execution failed" }
             }
             
-            if result.success {
+            if result.success == true {
                 state.successCount = state.successCount + 1
                 state.failureCount = 0
                 
