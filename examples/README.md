@@ -21,6 +21,8 @@ Each example is intended to be standalone and to demonstrate one specific featur
 - `examples/features/struct_init.k` - struct init syntax sugar
 - `examples/features/ranges_slices.k` - ranges and slices
 - `examples/features/error_handling.k` - recoverable errors with `? {}` and `fail()`
+- `examples/features/truthy_falsy.k` - truthy/falsy basics
+- `examples/features/truthy_falsy_comprehensive.k` - truthy/falsy across values and operators
 - `examples/features/concurrency_basic.k` - `&`, `|`, `then`, `wait`
 - `examples/features/concurrency_advanced.k` - rendezvous send/recv
 - `examples/features/import_module.k` - module to import

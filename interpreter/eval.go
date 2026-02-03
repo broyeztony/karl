@@ -477,6 +477,10 @@ func isTruthy(val Value) bool {
 		return len(v.Elements) > 0
 	case *Object:
 		return len(v.Pairs) > 0
+	case *Map:
+		return len(v.Pairs) > 0
+	case *Set:
+		return len(v.Elements) > 0
 	default:
 		// All other types are truthy (functions, tasks, channels, etc.)
 		return true
