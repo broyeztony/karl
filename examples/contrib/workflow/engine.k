@@ -102,7 +102,7 @@ let executeIntervalTask = (intervalTask, context) -> {
 // Execute a single task with error handling and retry logic
 let executeTask = (task, context, config) -> {
     // Use advanced retry policy if configured, otherwise fall back to simple retry
-    if config.retryPolicy {
+    if config.retryPolicy != null {
         let retryEngine = RetryModule.createRetryEngine(config.retryPolicy)
         retryEngine.execute(task, context)
     } else {
@@ -166,7 +166,7 @@ let executeSequential = (tasks, initialContext, config) -> {
             }]
             
             // Stop on first failure if configured
-            if config.stopOnError {
+            if config.stopOnError == true {
                 break { success: false, results: results, failedAt: task.name }
             }
         }
@@ -183,7 +183,7 @@ let executeParallel = (tasks, context, config) -> {
     log("[WORKFLOW] Starting parallel execution of", tasks.length, "tasks")
     
     // Use advanced parallel executor if configured
-    if config.useWorkerPool {
+    if config.useWorkerPool == true {
         log("[WORKFLOW] Using worker pool with", config.workerCount, "workers")
         
         let parallelExecutor = ParallelModule.createParallelExecutor({
@@ -258,13 +258,13 @@ let executeDAG = (nodes, edges, initialContext, config) -> {
     log("[WORKFLOW] Starting DAG execution with", nodes.length, "nodes")
     
     // Initialize storage if persistence is enabled
-    let storage = if config.enablePersistence {
+    let storage = if config.enablePersistence == true {
         StorageModule.createStorageEngine(config.storageConfig)
     } else {
         null
     }
     
-    let workflowId = if config.workflowId { config.workflowId } else { "workflow-" + now() }
+    let workflowId = if config.workflowId != null { config.workflowId } else { "workflow-" + now() }
     
     // Check if we can resume from saved state
     let resumeState = if storage {
