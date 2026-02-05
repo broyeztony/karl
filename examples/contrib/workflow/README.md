@@ -25,17 +25,19 @@ A comprehensive workflow engine demonstrating Karl's powerful concurrency featur
 
 ```bash
 # Run the quick start guide
-karl run examples/contrib/workflow/quickstart.k
+cd examples/contrib/workflow/
+
+karl run quickstart.k
 
 # Try specific examples
-karl run examples/contrib/workflow/examples.k           # Basic workflows
-karl run examples/contrib/workflow/test_pipeline.k      # Pipeline execution
-karl run examples/contrib/workflow/test_integrated_features.k  # All features
+karl run examples.k           # Basic workflows
+karl run test_pipeline.k      # Pipeline execution
+karl run test_integrated_features.k  # All features
 
 # Explore advanced demos
-karl run examples/contrib/workflow/timer_tasks.k        # Scheduled tasks
-karl run examples/contrib/workflow/dag_pipeline.k       # Complex DAG
-karl run examples/contrib/workflow/subdag_demo.k        # Reusable components
+karl run timer_tasks.k        # Scheduled tasks
+karl run dag_pipeline.k       # Complex DAG
+karl run subdag_demo.k        # Reusable components
 ```
 
 ---
