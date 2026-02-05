@@ -1,6 +1,6 @@
 // Test DAG without persistence
 
-let makeEngine = import "examples/contrib/workflow/engine.k"
+let makeEngine = import "./engine.k"
 let Engine = makeEngine()
 
 log("Testing DAG without persistence...")

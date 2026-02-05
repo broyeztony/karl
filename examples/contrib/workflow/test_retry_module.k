@@ -1,6 +1,6 @@
 // Minimal test to isolate the retry policy issue
 
-let makeRetry = import "examples/contrib/workflow/retry_policy.k"
+let makeRetry = import "./retry_policy.k"
 let Retry = makeRetry()
 
 log("Creating retry engine...")

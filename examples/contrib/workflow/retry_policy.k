@@ -67,13 +67,14 @@ let calculateDelay = (attempt, policy) -> {
     
     // Add jitter if enabled
     if policy.jitterEnabled {
-        // Use integer arithmetic for jitter (no float conversion needed)
-        let jitterRange = (cappedDelay * policy.jitterFactor * 1000) / 1000  // Keep as integer
+        // Use integer arithmetic for jitter (convert factor to percentage)
+        let jitterPercent = (policy.jitterFactor * 100)  // 0.1 -> 10
+        let jitterRange = (cappedDelay * jitterPercent) / 100  // Integer division
         let randomValue = now() % 1000  // 0-999
-        let jitter = (randomValue * jitterRange * 2 / 1000) - jitterRange
+        let jitter = ((randomValue * jitterRange * 2) / 1000) - jitterRange
         let finalDelay = cappedDelay + jitter
         
-        // Ensure non-negative
+        // Ensure non-negative and integer
         if finalDelay < 0 { 0 } else { finalDelay }
     } else {
         cappedDelay
@@ -191,7 +192,7 @@ let createLinearRetryPolicy = (maxAttempts, initialDelay, maxDelay) -> {
         strategy: RETRY_LINEAR,
         initialDelay: initialDelay,
         maxDelay: maxDelay,
-        jitterEnabled: true,
+        jitterEnabled: false,
         jitterFactor: 0.1,
         retryableErrors: [],
     }
@@ -204,7 +205,7 @@ let createExponentialRetryPolicy = (maxAttempts, initialDelay, maxDelay) -> {
         strategy: RETRY_EXPONENTIAL,
         initialDelay: initialDelay,
         maxDelay: maxDelay,
-        jitterEnabled: true,
+        jitterEnabled: false,
         jitterFactor: 0.1,
         retryableErrors: [],
     }

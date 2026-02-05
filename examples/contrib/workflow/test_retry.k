@@ -1,6 +1,6 @@
 // Simple retry test
 
-let makeEngine = import "examples/contrib/workflow/engine.k"
+let makeEngine = import "./engine.k"
 let Engine = makeEngine()
 
 log("Testing retry policy...")

@@ -270,25 +270,19 @@ let getReadyNodes = (nodes, edges, state) -> {
 
 // Create initial state for a new workflow
 let createInitialState = (nodes, edges) -> {
-    let emptyCompletedNodes = for i < nodes.length with i = 0, comp = {} {
-        comp[nodes[i].id] = false
-        i = i + 1
-    } then comp
-    
-    let emptyStartedNodes = for i < nodes.length with i = 0, started = {} {
-        started[nodes[i].id] = false
-        i = i + 1
-    } then started
-    
-    let emptyResults = for i < nodes.length with i = 0, res = {} {
-        res[nodes[i].id] = null
-        i = i + 1
-    } then res
-    
     {
-        completedNodes: emptyCompletedNodes,
-        startedNodes: emptyStartedNodes,
-        results: emptyResults,
+        completedNodes: for i < nodes.length with i = 0, comp = {} {
+            comp[nodes[i].id] = false
+            i = i + 1
+        } then comp,
+        startedNodes: for i < nodes.length with i = 0, started = {} {
+            started[nodes[i].id] = false
+            i = i + 1
+        } then started,
+        results: for i < nodes.length with i = 0, res = {} {
+            res[nodes[i].id] = null
+            i = i + 1
+        } then res,
         totalCompleted: 0,
         status: "initialized",
         nodeCount: nodes.length,

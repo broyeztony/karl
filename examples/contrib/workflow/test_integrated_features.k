@@ -7,10 +7,10 @@
 // 3. Persisted DAG state with resume capability
 // ============================================================================
 
-let makeEngine = import "examples/contrib/workflow/engine.k"
+let makeEngine = import "./engine.k"
 let Engine = makeEngine()
 
-let makeRetry = import "examples/contrib/workflow/retry_policy.k"
+let makeRetry = import "./retry_policy.k"
 let Retry = makeRetry()
 
 log("==========================================================")

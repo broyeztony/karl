@@ -12,13 +12,13 @@
 // ============================================================================
 
 // Import enhanced modules (relative paths)
-let makeRetry = import "examples/contrib/workflow/retry_policy.k"
+let makeRetry = import "./retry_policy.k"
 let RetryModule = makeRetry()
 
-let makeParallel = import "examples/contrib/workflow/parallel_executor.k"
+let makeParallel = import "./parallel_executor.k"
 let ParallelModule = makeParallel()
 
-let makeStorage = import "examples/contrib/workflow/storage.k"
+let makeStorage = import "./storage.k"
 let StorageModule = makeStorage()
 
 // ----------------------------------------------------------------------------
@@ -700,7 +700,6 @@ let makeModule = () -> {
         
         // Sub-DAG support
         createSubDAG: createSubDAG,
-        flattenSubDAGs: flattenSubDAGs,
         
         // Configuration
         defaultConfig: defaultConfig,

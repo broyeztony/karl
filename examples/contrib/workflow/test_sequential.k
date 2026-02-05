@@ -1,6 +1,6 @@
 // Minimal test to debug the boolean issue
 
-let makeEngine = import "examples/contrib/workflow/engine.k"
+let makeEngine = import "./engine.k"
 let Engine = makeEngine()
 
 log("Testing basic retry...")

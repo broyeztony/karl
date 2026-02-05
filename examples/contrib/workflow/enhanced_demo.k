@@ -7,10 +7,17 @@
 // 3. Parallel execution engine (parallel_executor.k)
 // ============================================================================
 
-import "./storage.k" as Storage
-import "./retry_policy.k" as Retry
-import "./parallel_executor.k" as Parallel
-import "./engine.k" as Engine
+let makeStorage = import "./storage.k"
+let Storage = makeStorage()
+
+let makeRetry = import "./retry_policy.k"
+let Retry = makeRetry()
+
+let makeParallel = import "./parallel_executor.k"
+let Parallel = makeParallel()
+
+let makeEngine = import "./engine.k"
+let Engine = makeEngine()
 
 log("==========================================================")
 log("ENHANCED WORKFLOW ENGINE DEMO")
@@ -29,7 +36,8 @@ let createFlakyTask = (name, failureRate) -> {
         name: name,
         handler: (ctx) -> {
             flakyTaskAttempts = flakyTaskAttempts + 1
-            let shouldFail = random() < failureRate
+            let randomValue = (now() % 1000) / 1000
+            let shouldFail = randomValue < failureRate
             
             if shouldFail {
                 log("[FLAKY]", name, "- Simulating failure")
@@ -48,7 +56,9 @@ let retryEngine = Retry.createRetryEngine({
     strategy: Retry.RETRY_EXPONENTIAL,
     initialDelay: 100,
     maxDelay: 5000,
-    jitterEnabled: true,
+    jitterEnabled: false,
+    jitterFactor: 0.1,
+    retryableErrors: [],
 })
 
 // Execute flaky task with retry
@@ -70,7 +80,7 @@ log("\n--- DEMO 2: Parallel Execution with Worker Pool ---\n")
 // Create CPU-intensive tasks
 let createComputeTask = (id, workload) -> {
     {
-        name: "Compute-" + id,
+        name: "Compute-" + str(id),
         handler: (ctx) -> {
             log("[COMPUTE]", id, "- Starting heavy computation")
             
@@ -95,7 +105,11 @@ let computeTasks = for i < 12 with i = 0, tasks = [] {
 // Create parallel executor with 4 workers
 let parallelExecutor = Parallel.createParallelExecutor({
     workerCount: 4,
+    queueSize: 100,
+    enablePriority: false,
+    shutdownTimeout: 30000,
     enableMetrics: true,
+    batchSize: 10,
 })
 
 log("Executing", computeTasks.length, "tasks with 4 workers...")
@@ -131,6 +145,8 @@ log("\n--- DEMO 3: Persisted DAG State with Resume ---\n")
 let storageEngine = Storage.createStorageEngine({
     storageDir: "./workflow-state",
     enableAutoCheckpoint: false,
+    checkpointInterval: 5000,
+    compressionEnabled: false,
 })
 
 // Define a simple DAG
@@ -211,6 +227,22 @@ let dagConfig = {
     defaultRetries: 2,
     defaultWorkers: 3,
     stopOnError: false,
+    retryPolicy: null,
+    useWorkerPool: false,
+    workerCount: 4,
+    queueSize: 100,
+    batchSize: 10,
+    enablePriority: false,
+    shutdownTimeout: 30000,
+    enableMetrics: true,
+    enablePersistence: false,
+    workflowId: null,
+    storageConfig: {
+        storageDir: "./workflow-state",
+        enableAutoCheckpoint: false,
+        checkpointInterval: 5000,
+        compressionEnabled: false,
+    },
 }
 
 let dagResult = Engine.executeDAG(nodes, edges, {}, dagConfig)
@@ -243,11 +275,12 @@ log("\n--- DEMO 4: Combined Features - Resilient Parallel DAG ---\n")
 // Create a complex workflow combining all features
 let createResilientTask = (id, retryPolicy) -> {
     {
-        id: "task-" + id,
-        name: "ResilientTask-" + id,
+        id: "task-" + str(id),
+        name: "ResilientTask-" + str(id),
         handler: (ctx) -> {
             // Simulate occasional failures
-            let shouldFail = random() < 0.3
+            let randomValue = (now() % 1000) / 1000
+            let shouldFail = randomValue < 0.3
             
             if shouldFail {
                 { success: false, error: "Random failure" }
