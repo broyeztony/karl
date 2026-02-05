@@ -28,6 +28,9 @@ echo -e "${BLUE}Karl Workflow Engine - Test Suite${NC}"
 echo -e "${BLUE}============================================================================${NC}"
 echo ""
 
+# for Mac users
+function timeout() { perl -e 'alarm shift; exec @ARGV' "$@"; }
+
 # Function to run a test
 run_test() {
     local test_file=$1
