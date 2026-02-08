@@ -114,6 +114,10 @@ Proposed algorithm:
 - `break expr` returns `expr` as the loop result and does not evaluate `then`.
 - If `then` is omitted and `break` has no value, the loop result is `Unit`.
 
+**Progress invariant**:
+- Loop-state updates are explicit and live in the body.
+- Any branch that executes `continue` should preserve progress (for example, by updating the iterator/state before continuing), otherwise the loop may not terminate.
+
 ### Assignment and mutation
 
 - Assignment is an expression; it evaluates to the assigned value.

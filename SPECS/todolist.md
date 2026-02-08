@@ -6,7 +6,7 @@
 - Parser: consider treating newlines as statement boundaries to reduce adjacency ambiguity.
 - Extend test coverage when new syntax is added (parser + interpreter + examples).
 - Brainstorm objects versus maps versus mutability versus shapes
-- Recover block that run for any situation where the runtime throws an expection?
+- Recover block that run for any situation where the runtime throws an expection? ✅
 - string interpolation
 - make a <task> cancelable
 
