@@ -641,6 +641,26 @@ let config = {
 engine.execute(workflow, initialContext, config)
 ```
 
+### Optional Fields (Recommended Idiom)
+
+Workflow configs are user-provided objects, so optional keys should be read safely.
+
+```karl
+let getOr = (obj, key, fallback) -> obj[key] ? fallback
+
+let workerCount = getOr(config, "workerCount", 4)
+let retryPolicy = getOr(config, "retryPolicy", null)
+
+if retryPolicy {
+    // use advanced retry
+}
+```
+
+Notes:
+- `obj[key]` can raise a runtime error if the key is missing.
+- `?` recovers that error and returns the fallback.
+- Fallback can be a direct value (`? "x"`, `? 0`, `? true`) or a block (`? { ... }`).
+
 ### Task Configuration
 
 ```karl

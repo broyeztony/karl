@@ -149,7 +149,6 @@ func builtinBufferedChannel(_ *Evaluator, args []Value) (Value, error) {
 	return &Channel{Ch: make(chan Value, size.Value)}, nil
 }
 
-
 func builtinSleep(_ *Evaluator, args []Value) (Value, error) {
 	if len(args) != 1 {
 		return nil, &RuntimeError{Message: "sleep expects 1 argument"}
@@ -602,7 +601,7 @@ func builtinThen(e *Evaluator, args []Value) (Value, error) {
 	go func() {
 		val, sig, err := taskAwait(task)
 		if err != nil {
-			exitProcess(e.formatError(err))
+			e.handleAsyncError(thenTask, err)
 			return
 		}
 		if sig != nil {
@@ -611,7 +610,7 @@ func builtinThen(e *Evaluator, args []Value) (Value, error) {
 		}
 		res, sig, err := e.applyFunction(fn, []Value{val})
 		if err != nil {
-			exitProcess(e.formatError(err))
+			e.handleAsyncError(thenTask, err)
 			return
 		}
 		if sig != nil {

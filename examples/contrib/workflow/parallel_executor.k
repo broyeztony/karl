@@ -21,6 +21,9 @@ let defaultPoolConfig = {
     shutdownTimeout: 30000,      // 30 seconds
 }
 
+// Safe optional field access for user-provided objects/config.
+let getOr = (obj, key, fallback) -> obj[key] ? { fallback }
+
 // ----------------------------------------------------------------------------
 // TASK QUEUE MANAGEMENT
 // ----------------------------------------------------------------------------
@@ -129,7 +132,7 @@ let createWorker = (workerId, taskChan, resultChan, config) -> {
                 taskName: task.name,
                 success: result.success,
                 data: result.data,
-                error: null,  // TODO: Safely access result.error if it exists
+                error: result.error ? { null },
                 duration: duration,
             })
         } then metrics
@@ -150,11 +153,11 @@ let createWorker = (workerId, taskChan, resultChan, config) -> {
 let createWorkerPool = (config) -> {
     let finalConfig = if config != null {
         {
-            workerCount: if config.workerCount != null { config.workerCount } else { defaultPoolConfig.workerCount },
-            queueSize: if config.queueSize != null { config.queueSize } else { defaultPoolConfig.queueSize },
-            enablePriority: if config.enablePriority != null { config.enablePriority } else { defaultPoolConfig.enablePriority },
-            enableMetrics: if config.enableMetrics != null { config.enableMetrics } else { defaultPoolConfig.enableMetrics },
-            shutdownTimeout: if config.shutdownTimeout != null { config.shutdownTimeout } else { defaultPoolConfig.shutdownTimeout },
+            workerCount: getOr(config, "workerCount", defaultPoolConfig.workerCount),
+            queueSize: getOr(config, "queueSize", defaultPoolConfig.queueSize),
+            enablePriority: getOr(config, "enablePriority", defaultPoolConfig.enablePriority),
+            enableMetrics: getOr(config, "enableMetrics", defaultPoolConfig.enableMetrics),
+            shutdownTimeout: getOr(config, "shutdownTimeout", defaultPoolConfig.shutdownTimeout),
         }
     } else {
         defaultPoolConfig
@@ -261,8 +264,9 @@ let createWorkerPool = (config) -> {
 
 // Execute tasks in parallel using a worker pool
 let executeParallelWithPool = (tasks, context, config) -> {
+    let workerCount = getOr(config, "workerCount", defaultPoolConfig.workerCount)
     log("[PARALLEL] Starting execution of", tasks.length, "tasks")
-    log("[PARALLEL] Worker count:", config.workerCount)
+    log("[PARALLEL] Worker count:", workerCount)
     
     let pool = createWorkerPool(config)
     
@@ -320,7 +324,7 @@ let executeWithLoadBalancing = (tasks, context, config) -> {
 
 // Execute tasks with batching
 let executeWithBatching = (tasks, context, config) -> {
-    let batchSize = if config.batchSize != null { config.batchSize } else { 10 }
+    let batchSize = getOr(config, "batchSize", 10)
     
     log("[BATCH] Processing", tasks.length, "tasks in batches of", batchSize)
     
@@ -364,12 +368,12 @@ let executeWithBatching = (tasks, context, config) -> {
 let createParallelExecutor = (config) -> {
     let finalConfig = if config != null {
         {
-            workerCount: if config.workerCount != null { config.workerCount } else { defaultPoolConfig.workerCount },
-            queueSize: if config.queueSize != null { config.queueSize } else { defaultPoolConfig.queueSize },
-            enablePriority: if config.enablePriority != null { config.enablePriority } else { defaultPoolConfig.enablePriority },
-            shutdownTimeout: if config.shutdownTimeout != null { config.shutdownTimeout } else { defaultPoolConfig.shutdownTimeout },
-            enableMetrics: if config.enableMetrics != null { config.enableMetrics } else { defaultPoolConfig.enableMetrics },
-            batchSize: if config.batchSize != null { config.batchSize } else { 10 },
+            workerCount: getOr(config, "workerCount", defaultPoolConfig.workerCount),
+            queueSize: getOr(config, "queueSize", defaultPoolConfig.queueSize),
+            enablePriority: getOr(config, "enablePriority", defaultPoolConfig.enablePriority),
+            shutdownTimeout: getOr(config, "shutdownTimeout", defaultPoolConfig.shutdownTimeout),
+            enableMetrics: getOr(config, "enableMetrics", defaultPoolConfig.enableMetrics),
+            batchSize: getOr(config, "batchSize", 10),
         }
     } else {
         defaultPoolConfig
