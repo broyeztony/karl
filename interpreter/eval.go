@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"karl/ast"
+	"os"
 	"sort"
 	"unicode/utf8"
 )
@@ -12,6 +13,8 @@ type Evaluator struct {
 	filename    string
 	projectRoot string
 	modules     *moduleState
+
+	allowRecoverableTasks bool
 }
 
 func NewEvaluator() *Evaluator {
@@ -39,6 +42,28 @@ func (e *Evaluator) SetProjectRoot(root string) {
 	e.projectRoot = root
 }
 
+func (e *Evaluator) SetAllowRecoverableTasks(allow bool) {
+	e.allowRecoverableTasks = allow
+}
+
+func (e *Evaluator) handleAsyncError(task *Task, err error) {
+	if err == nil {
+		return
+	}
+	if exitErr, ok := err.(*ExitError); ok {
+		exitProcess(exitErr.Message)
+		return
+	}
+	if !e.allowRecoverableTasks {
+		exitProcess(e.formatError(err))
+		return
+	}
+
+	task.complete(nil, err)
+	// Failed detached tasks must be visible even when nobody awaits them.
+	_, _ = os.Stderr.WriteString("[task error] " + e.formatError(err) + "\n")
+}
+
 func (e *Evaluator) formatError(err error) string {
 	return FormatRuntimeError(err, e.source, e.filename)
 }
@@ -48,15 +73,28 @@ type queryRow struct {
 	key  Value
 }
 
-func recoverableErrorValue(err *RecoverableError) Value {
-	kind := err.Kind
-	if kind == "" {
-		kind = "error"
+func errorValue(err error) Value {
+	switch e := err.(type) {
+	case *RecoverableError:
+		kind := e.Kind
+		if kind == "" {
+			kind = "error"
+		}
+		return &Object{Pairs: map[string]Value{
+			"kind":    &String{Value: kind},
+			"message": &String{Value: e.Message},
+		}}
+	case *RuntimeError:
+		return &Object{Pairs: map[string]Value{
+			"kind":    &String{Value: "runtime"},
+			"message": &String{Value: e.Message},
+		}}
+	default:
+		return &Object{Pairs: map[string]Value{
+			"kind":    &String{Value: "error"},
+			"message": &String{Value: err.Error()},
+		}}
 	}
-	return &Object{Pairs: map[string]Value{
-		"kind":    &String{Value: kind},
-		"message": &String{Value: err.Message},
-	}}
 }
 
 func (e *Evaluator) Eval(node ast.Node, env *Environment) (Value, *Signal, error) {
@@ -449,12 +487,14 @@ func (e *Evaluator) evalRecoverExpression(node *ast.RecoverExpression, env *Envi
 	if sig != nil {
 		return val, sig, err
 	}
-	re, ok := err.(*RecoverableError)
-	if !ok {
+	switch err.(type) {
+	case *RecoverableError, *RuntimeError:
+		// recover block handles both recoverable and runtime errors.
+	default:
 		return nil, nil, err
 	}
 	fallbackEnv := NewEnclosedEnvironment(env)
-	fallbackEnv.Define("error", recoverableErrorValue(re))
+	fallbackEnv.Define("error", errorValue(err))
 	return e.Eval(node.Fallback, fallbackEnv)
 }
 
@@ -1142,11 +1182,7 @@ func (e *Evaluator) spawnTask(expr ast.Expression, env *Environment) (*Task, err
 	go func() {
 		val, sig, err := e.Eval(expr, env)
 		if err != nil {
-			if exitErr, ok := err.(*ExitError); ok {
-				exitProcess(exitErr.Message)
-				return
-			}
-			exitProcess(e.formatError(err))
+			e.handleAsyncError(task, err)
 			return
 		}
 		if sig != nil {

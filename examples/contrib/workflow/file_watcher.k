@@ -210,9 +210,9 @@ let watcherLoop = for iteration < 4 with iteration = 0, lastSeen = [], totalProc
             log("──────────────────────────────────────────────────────────────────────")
             
             // Execute processing workflow (fail fast on validation errors)
-            let quickFailConfig = { defaultRetries: 0, defaultWorkers: 3, stopOnError: true }
+            let quickFailConfig = { defaultRetries: 0, stopOnError: true }
             let result = execute(fileProcessingWorkflow, { file: file }, quickFailConfig)
-            
+
             // Check if workflow succeeded
             if result.success {
                 log("  ✅ Processing completed successfully")

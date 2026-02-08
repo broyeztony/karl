@@ -21,6 +21,9 @@ let ParallelModule = makeParallel()
 let makeStorage = import "./storage.k"
 let StorageModule = makeStorage()
 
+// Safe optional field access for user-provided objects/config.
+let getOr = (obj, key, fallback) -> obj[key] ? { fallback }
+
 // ----------------------------------------------------------------------------
 // TIMER TASK SUPPORT
 // ----------------------------------------------------------------------------
@@ -101,13 +104,15 @@ let executeIntervalTask = (intervalTask, context) -> {
 
 // Execute a single task with error handling and retry logic
 let executeTask = (task, context, config) -> {
+    let retryPolicy = getOr(config, "retryPolicy", null)
+
     // Use advanced retry policy if configured, otherwise fall back to simple retry
-    if config.retryPolicy != null {
-        let retryEngine = RetryModule.createRetryEngine(config.retryPolicy)
+    if retryPolicy {
+        let retryEngine = RetryModule.createRetryEngine(retryPolicy)
         retryEngine.execute(task, context)
     } else {
         // Legacy simple retry logic
-        let maxRetries = config.defaultRetries
+        let maxRetries = getOr(config, "defaultRetries", 0)
         
         for i < maxRetries + 1 with i = 0, result = { success: false, error: "Not executed" }, success = false {
             if success { break result }
@@ -181,18 +186,20 @@ let executeSequential = (tasks, initialContext, config) -> {
 
 let executeParallel = (tasks, context, config) -> {
     log("[WORKFLOW] Starting parallel execution of", tasks.length, "tasks")
+    let useWorkerPool = getOr(config, "useWorkerPool", false)
     
     // Use advanced parallel executor if configured
-    if config.useWorkerPool {
-        log("[WORKFLOW] Using worker pool with", config.workerCount, "workers")
+    if useWorkerPool {
+        let workerCount = getOr(config, "workerCount", 4)
+        log("[WORKFLOW] Using worker pool with", workerCount, "workers")
         
         let parallelExecutor = ParallelModule.createParallelExecutor({
-            workerCount: config.workerCount,
-            queueSize: config.queueSize,
+            workerCount: workerCount,
+            queueSize: getOr(config, "queueSize", 100),
             batchSize: null,  // Will use default
-            enablePriority: config.enablePriority,
+            enablePriority: getOr(config, "enablePriority", false),
             shutdownTimeout: null,  // Will use default
-            enableMetrics: config.enableMetrics,
+            enableMetrics: getOr(config, "enableMetrics", true),
         })
         
         parallelExecutor.execute(tasks, context)
@@ -260,15 +267,18 @@ let executeParallel = (tasks, context, config) -> {
 
 let executeDAG = (nodes, edges, initialContext, config) -> {
     log("[WORKFLOW] Starting DAG execution with", nodes.length, "nodes")
+    let enablePersistence = getOr(config, "enablePersistence", false)
+    let storageConfig = getOr(config, "storageConfig", null)
+    let configuredWorkflowId = getOr(config, "workflowId", null)
     
     // Initialize storage if persistence is enabled
-    let storage = if config.enablePersistence {
-        StorageModule.createStorageEngine(config.storageConfig)
+    let storage = if enablePersistence {
+        StorageModule.createStorageEngine(storageConfig)
     } else {
         null
     }
     
-    let workflowId = if config.workflowId != null { config.workflowId } else { "workflow-" + str(now()) }
+    let workflowId = if configuredWorkflowId != null { configuredWorkflowId } else { "workflow-" + str(now()) }
     
     // Check if we can resume from saved state
     let resumeState = if storage != null {
@@ -540,7 +550,8 @@ let executePipeline = (stages, items, config) -> {
     // Create workers for each stage
     let allWorkers = for stageIdx < stages.length with stageIdx = 0, workers = [] {
         let stage = stages[stageIdx]
-        let numWorkers = if stage.workers != null { stage.workers } else { config.defaultWorkers }
+        let stageWorkers = getOr(stage, "workers", null)
+        let numWorkers = if stageWorkers != null { stageWorkers } else { getOr(config, "defaultWorkers", 3) }
         let inputChan = channels[stageIdx]
         let outputChan = if stageIdx < stages.length - 1 { channels[stageIdx + 1] } else { null }
         
@@ -639,22 +650,24 @@ let defaultConfig = {
 
 // Merge user config with defaults to ensure all properties exist
 let mergeConfig = (userConfig) -> {
-    let hasRetryPolicy = if userConfig.retryPolicy != null { true } else { false }
+    let retryPolicy = getOr(userConfig, "retryPolicy", null)
+    let hasRetryPolicy = retryPolicy != null
+
     {
-        defaultRetries: if hasRetryPolicy { 0 } else { if userConfig.defaultRetries != null { userConfig.defaultRetries } else { defaultConfig.defaultRetries } },
-        defaultWorkers: if userConfig.defaultWorkers != null { userConfig.defaultWorkers } else { defaultConfig.defaultWorkers },
-        stopOnError: if userConfig.stopOnError != null { userConfig.stopOnError } else { defaultConfig.stopOnError },
-        retryPolicy: if userConfig.retryPolicy != null { userConfig.retryPolicy } else { null },
-        useWorkerPool: if userConfig.useWorkerPool != null { userConfig.useWorkerPool } else { defaultConfig.useWorkerPool },
-        workerCount: if userConfig.workerCount != null { userConfig.workerCount } else { defaultConfig.workerCount },
-        queueSize: if userConfig.queueSize != null { userConfig.queueSize } else { 100 },
-        batchSize: if userConfig.batchSize != null { userConfig.batchSize } else { 10 },
-        enablePriority: if userConfig.enablePriority != null { userConfig.enablePriority } else { false },
-        shutdownTimeout: if userConfig.shutdownTimeout != null { userConfig.shutdownTimeout } else { 30000 },
-        enableMetrics: if userConfig.enableMetrics != null { userConfig.enableMetrics } else { defaultConfig.enableMetrics },
-        enablePersistence: if userConfig.enablePersistence != null { userConfig.enablePersistence } else { defaultConfig.enablePersistence },
-        workflowId: if userConfig.workflowId != null { userConfig.workflowId } else { null },
-        storageConfig: if userConfig.storageConfig != null { userConfig.storageConfig } else { defaultConfig.storageConfig },
+        defaultRetries: if hasRetryPolicy { 0 } else { getOr(userConfig, "defaultRetries", defaultConfig.defaultRetries) },
+        defaultWorkers: getOr(userConfig, "defaultWorkers", defaultConfig.defaultWorkers),
+        stopOnError: getOr(userConfig, "stopOnError", defaultConfig.stopOnError),
+        retryPolicy: retryPolicy,
+        useWorkerPool: getOr(userConfig, "useWorkerPool", defaultConfig.useWorkerPool),
+        workerCount: getOr(userConfig, "workerCount", defaultConfig.workerCount),
+        queueSize: getOr(userConfig, "queueSize", 100),
+        batchSize: getOr(userConfig, "batchSize", 10),
+        enablePriority: getOr(userConfig, "enablePriority", false),
+        shutdownTimeout: getOr(userConfig, "shutdownTimeout", 30000),
+        enableMetrics: getOr(userConfig, "enableMetrics", defaultConfig.enableMetrics),
+        enablePersistence: getOr(userConfig, "enablePersistence", defaultConfig.enablePersistence),
+        workflowId: getOr(userConfig, "workflowId", null),
+        storageConfig: getOr(userConfig, "storageConfig", defaultConfig.storageConfig),
     }
 }
 
@@ -662,7 +675,7 @@ let mergeConfig = (userConfig) -> {
 let execute = (workflow, context, userConfig) -> {
     // Merge user config with defaults to ensure all properties exist
     let config = mergeConfig(userConfig)
-    
+
     log("==================================================")
     log("[ENGINE] Executing workflow:", workflow.name)
     log("==================================================")
