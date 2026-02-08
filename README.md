@@ -6,10 +6,9 @@
 [![CI](https://github.com/broyeztony/Karl/actions/workflows/ci.yml/badge.svg)](https://github.com/broyeztony/Karl/actions/workflows/ci.yml)
 [![Workflow Tests](https://github.com/broyeztony/Karl/actions/workflows/workflow-tests.yml/badge.svg)](https://github.com/broyeztony/Karl/actions/workflows/workflow-tests.yml)
 
-<figure>
-  <img src="assets/vscode.png" alt="Visual Studio Code plugin for Karl">
-  <figcaption>Visual Studio Code plugin for Karl</figcaption>
-</figure>
+VS Code plugin available in `karl-vscode/`.
+
+[![Video](https://img.youtube.com/vi/pr4xskpX1UU/maxresdefault.jpg)](https://www.youtube.com/watch?v=pr4xskpX1UU)
 
 #### Tour of Karl
 
