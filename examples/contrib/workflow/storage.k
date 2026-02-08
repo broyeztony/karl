@@ -19,6 +19,9 @@ let defaultStorageConfig = {
     compressionEnabled: false,
 }
 
+// Safe optional field access for user-provided objects/config.
+let getOr = (obj, key, fallback) -> obj[key] ? { fallback }
+
 // ----------------------------------------------------------------------------
 // STATE SERIALIZATION
 // ----------------------------------------------------------------------------
@@ -298,10 +301,10 @@ let createInitialState = (nodes, edges) -> {
 let createStorageEngine = (config) -> {
     let finalConfig = if config {
         {
-            storageDir: if config.storageDir != null { config.storageDir } else { defaultStorageConfig.storageDir },
-            checkpointInterval: if config.checkpointInterval != null { config.checkpointInterval } else { defaultStorageConfig.checkpointInterval },
-            enableAutoCheckpoint: if config.enableAutoCheckpoint != null { config.enableAutoCheckpoint } else { defaultStorageConfig.enableAutoCheckpoint },
-            compressionEnabled: if config.compressionEnabled != null { config.compressionEnabled } else { defaultStorageConfig.compressionEnabled },
+            storageDir: getOr(config, "storageDir", defaultStorageConfig.storageDir),
+            checkpointInterval: getOr(config, "checkpointInterval", defaultStorageConfig.checkpointInterval),
+            enableAutoCheckpoint: getOr(config, "enableAutoCheckpoint", defaultStorageConfig.enableAutoCheckpoint),
+            compressionEnabled: getOr(config, "compressionEnabled", defaultStorageConfig.compressionEnabled),
         }
     } else {
         defaultStorageConfig

@@ -741,13 +741,11 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 
 func (p *Parser) parseRecoverExpression(left ast.Expression) ast.Expression {
 	recoverToken := p.curToken
-	if _, ok := left.(*ast.CallExpression); !ok {
-		p.addError(recoverToken, "recover block only allowed after call expression")
-	}
-	if !p.expectPeek(token.LBRACE) {
+	p.nextToken()
+	fallback := p.parseExpression(LOWEST)
+	if fallback == nil {
 		return nil
 	}
-	fallback := p.parseBraceExpression()
 	return &ast.RecoverExpression{Token: recoverToken, Target: left, Fallback: fallback}
 }
 

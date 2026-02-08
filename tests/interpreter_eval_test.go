@@ -24,6 +24,10 @@ var NullValue = interpreter.NullValue
 var Equivalent = interpreter.Equivalent
 
 func evalInput(t *testing.T, input string) (Value, error) {
+	return evalInputWithOptions(t, input, false)
+}
+
+func evalInputWithOptions(t *testing.T, input string, allowRecoverableTasks bool) (Value, error) {
 	t.Helper()
 	p := parser.New(lexer.New(input))
 	program := p.ParseProgram()
@@ -35,6 +39,7 @@ func evalInput(t *testing.T, input string) (Value, error) {
 	}
 
 	eval := interpreter.NewEvaluator()
+	eval.SetAllowRecoverableTasks(allowRecoverableTasks)
 	env := interpreter.NewBaseEnvironment()
 	val, sig, err := eval.Eval(program, env)
 	if sig != nil {
@@ -46,6 +51,15 @@ func evalInput(t *testing.T, input string) (Value, error) {
 func mustEval(t *testing.T, input string) Value {
 	t.Helper()
 	val, err := evalInput(t, input)
+	if err != nil {
+		t.Fatalf("eval error: %v", err)
+	}
+	return val
+}
+
+func mustEvalWithOptions(t *testing.T, input string, allowRecoverableTasks bool) Value {
+	t.Helper()
+	val, err := evalInputWithOptions(t, input, allowRecoverableTasks)
 	if err != nil {
 		t.Fatalf("eval error: %v", err)
 	}
@@ -376,6 +390,26 @@ func TestEvalFailRecover(t *testing.T) {
 	assertString(t, val, "fallback")
 }
 
+func TestEvalRecoverRuntimeErrorMemberAccess(t *testing.T) {
+	val := mustEval(t, `let obj = {}; (obj.missing) ? { "fallback" }`)
+	assertString(t, val, "fallback")
+}
+
+func TestEvalRecoverRuntimeErrorIndexAccess(t *testing.T) {
+	val := mustEval(t, `let obj = {}; obj["missing"] ? { "fallback" }`)
+	assertString(t, val, "fallback")
+}
+
+func TestEvalRecoverRuntimeErrorDirectFallback(t *testing.T) {
+	val := mustEval(t, `let obj = {}; obj.missing ? "fallback"`)
+	assertString(t, val, "fallback")
+}
+
+func TestEvalRecoverDirectExpressionFallback(t *testing.T) {
+	val := mustEval(t, `fail("nope") ? 1 + 2`)
+	assertInteger(t, val, 3)
+}
+
 func TestEvalSetBasics(t *testing.T) {
 	val := mustEval(t, `let s = set(); s.add(1); s.add(2); s.add(2); [s.has(1), s.has(3), s.size]`)
 	expected := &Array{Elements: []Value{
@@ -436,6 +470,35 @@ wait next
 `
 	val := mustEval(t, input)
 	assertInteger(t, val, 4)
+}
+
+func TestEvalRecoverTaskErrorWhenAllowRecoverableTasks(t *testing.T) {
+	input := `
+let boom = () -> {
+	let obj = {}
+	obj.missing
+}
+let t = & boom()
+let out = (wait t) ? { "fallback" }
+out
+`
+	val := mustEvalWithOptions(t, input, true)
+	assertString(t, val, "fallback")
+}
+
+func TestEvalRecoverThenTaskErrorWhenAllowRecoverableTasks(t *testing.T) {
+	input := `
+let work = () -> 1
+let t = & work()
+let next = t.then(v -> {
+	let obj = {}
+	obj.missing
+})
+let out = (wait next) ? { "fallback" }
+out
+`
+	val := mustEvalWithOptions(t, input, true)
+	assertString(t, val, "fallback")
 }
 
 func TestEvalRaceExpression(t *testing.T) {

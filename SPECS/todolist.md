@@ -8,6 +8,7 @@
 - Brainstorm objects versus maps versus mutability versus shapes
 - Recover block that run for any situation where the runtime throws an expection?
 - string interpolation
+- make a <task> cancelable
 
 ## Known review points
 

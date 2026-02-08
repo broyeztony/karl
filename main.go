@@ -89,7 +89,7 @@ func parseCommand(args []string) int {
 }
 
 func runCommand(args []string) int {
-	positional, help, err := parseRunArgs(args)
+	allowRecoverableTasks, positional, help, err := parseRunArgs(args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		runUsage()
@@ -118,7 +118,7 @@ func runCommand(args []string) int {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return 1
 	}
-	val, err := runProgram(program, string(data), filename)
+	val, err := runProgram(program, string(data), filename, allowRecoverableTasks)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, interpreter.FormatRuntimeError(err, string(data), filename))
 		return 1
@@ -139,8 +139,10 @@ func parseUsage() {
 
 func runUsage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n")
-	fmt.Fprintf(os.Stderr, "  karl run <file.k>\n")
+	fmt.Fprintf(os.Stderr, "  karl run <file.k> [--allow-recoverable-tasks]\n")
 	fmt.Fprintf(os.Stderr, "  <file> can be '-' to read from stdin\n")
+	fmt.Fprintf(os.Stderr, "\nOptions:\n")
+	fmt.Fprintf(os.Stderr, "  --allow-recoverable-tasks   keep task errors recoverable via wait/? instead of immediate process exit\n")
 }
 
 func parseParseArgs(args []string) (string, []string, bool, error) {
@@ -172,21 +174,24 @@ func parseParseArgs(args []string) (string, []string, bool, error) {
 	return format, positional, false, nil
 }
 
-func parseRunArgs(args []string) ([]string, bool, error) {
+func parseRunArgs(args []string) (bool, []string, bool, error) {
+	allowRecoverableTasks := false
 	positional := []string{}
 	for _, arg := range args {
 		switch {
 		case arg == "-h" || arg == "--help":
-			return positional, true, nil
+			return allowRecoverableTasks, positional, true, nil
+		case arg == "--allow-recoverable-tasks":
+			allowRecoverableTasks = true
 		case arg == "-":
 			positional = append(positional, arg)
 		case strings.HasPrefix(arg, "-"):
-			return positional, false, fmt.Errorf("unknown flag: %s", arg)
+			return allowRecoverableTasks, positional, false, fmt.Errorf("unknown flag: %s", arg)
 		default:
 			positional = append(positional, arg)
 		}
 	}
-	return positional, false, nil
+	return allowRecoverableTasks, positional, false, nil
 }
 
 func readInput(path string) ([]byte, error) {
@@ -222,8 +227,9 @@ func parseProgram(data []byte, filename string) (*ast.Program, error) {
 	return program, nil
 }
 
-func runProgram(program *ast.Program, source string, filename string) (interpreter.Value, error) {
+func runProgram(program *ast.Program, source string, filename string, allowRecoverableTasks bool) (interpreter.Value, error) {
 	eval := interpreter.NewEvaluatorWithSourceAndFilename(source, filename)
+	eval.SetAllowRecoverableTasks(allowRecoverableTasks)
 	env := interpreter.NewBaseEnvironment()
 	val, sig, err := eval.Eval(program, env)
 	if err != nil {

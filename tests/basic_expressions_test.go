@@ -345,6 +345,45 @@ func TestExpressionKinds(t *testing.T) {
 			},
 		},
 		{
+			name:  "recover_non_call_expression",
+			input: `obj.missing ? { "fallback" }`,
+			assert: func(t *testing.T, expr ast.Expression) {
+				re, ok := expr.(*ast.RecoverExpression)
+				if !ok {
+					t.Fatalf("expected RecoverExpression, got %T", expr)
+				}
+				if _, ok := re.Target.(*ast.MemberExpression); !ok {
+					t.Fatalf("expected MemberExpression target, got %T", re.Target)
+				}
+			},
+		},
+		{
+			name:  "recover_literal_fallback",
+			input: `obj.missing ? "fallback"`,
+			assert: func(t *testing.T, expr ast.Expression) {
+				re, ok := expr.(*ast.RecoverExpression)
+				if !ok {
+					t.Fatalf("expected RecoverExpression, got %T", expr)
+				}
+				if _, ok := re.Fallback.(*ast.StringLiteral); !ok {
+					t.Fatalf("expected StringLiteral fallback, got %T", re.Fallback)
+				}
+			},
+		},
+		{
+			name:  "recover_expression_fallback",
+			input: `obj.missing ? 1 + 2`,
+			assert: func(t *testing.T, expr ast.Expression) {
+				re, ok := expr.(*ast.RecoverExpression)
+				if !ok {
+					t.Fatalf("expected RecoverExpression, got %T", expr)
+				}
+				if _, ok := re.Fallback.(*ast.InfixExpression); !ok {
+					t.Fatalf("expected InfixExpression fallback, got %T", re.Fallback)
+				}
+			},
+		},
+		{
 			name:  "member_expression",
 			input: "user.profile",
 			assert: func(t *testing.T, expr ast.Expression) {

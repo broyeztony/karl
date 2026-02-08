@@ -22,6 +22,9 @@ let RETRY_LINEAR = "linear"
 // Exponential back-off - delay doubles each attempt (delay * 2^attempt)
 let RETRY_EXPONENTIAL = "exponential"
 
+// Safe optional field access for user-provided objects/config.
+let getOr = (obj, key, fallback) -> obj[key] ? { fallback }
+
 // ----------------------------------------------------------------------------
 // RETRY POLICY CONFIGURATION
 // ----------------------------------------------------------------------------
@@ -143,7 +146,8 @@ let executeWithRetry = (task, context, policy) -> {
             }
         } else {
             lastResult = result
-            lastError = if result.error != null { result.error } else { "Unknown error" }
+            let errValue = result.error ? { null }
+            lastError = if errValue != null { errValue } else { "Unknown error" }
             
             // Check if error is retryable
             if !isRetryableError(lastError, policy) {
@@ -214,13 +218,13 @@ let createExponentialRetryPolicy = (maxAttempts, initialDelay, maxDelay) -> {
 // Create a custom retry policy
 let createCustomRetryPolicy = (config) -> {
     {
-        maxAttempts: if config.maxAttempts != null { config.maxAttempts } else { defaultRetryPolicy.maxAttempts },
-        strategy: if config.strategy != null { config.strategy } else { defaultRetryPolicy.strategy },
-        initialDelay: if config.initialDelay != null { config.initialDelay } else { defaultRetryPolicy.initialDelay },
-        maxDelay: if config.maxDelay != null { config.maxDelay } else { defaultRetryPolicy.maxDelay },
-        jitterEnabled: if config.jitterEnabled != null { config.jitterEnabled } else { defaultRetryPolicy.jitterEnabled },
-        jitterFactor: if config.jitterFactor != null { config.jitterFactor } else { defaultRetryPolicy.jitterFactor },
-        retryableErrors: if config.retryableErrors != null { config.retryableErrors } else { defaultRetryPolicy.retryableErrors },
+        maxAttempts: getOr(config, "maxAttempts", defaultRetryPolicy.maxAttempts),
+        strategy: getOr(config, "strategy", defaultRetryPolicy.strategy),
+        initialDelay: getOr(config, "initialDelay", defaultRetryPolicy.initialDelay),
+        maxDelay: getOr(config, "maxDelay", defaultRetryPolicy.maxDelay),
+        jitterEnabled: getOr(config, "jitterEnabled", defaultRetryPolicy.jitterEnabled),
+        jitterFactor: getOr(config, "jitterFactor", defaultRetryPolicy.jitterFactor),
+        retryableErrors: getOr(config, "retryableErrors", defaultRetryPolicy.retryableErrors),
     }
 }
 
@@ -240,9 +244,9 @@ let createCircuitBreaker = (config) -> {
         failureCount: 0,
         successCount: 0,
         lastFailureTime: 0,
-        threshold: if config.threshold != null { config.threshold } else { 5 },
-        timeout: if config.timeout != null { config.timeout } else { 60000 },  // 1 minute
-        halfOpenAttempts: if config.halfOpenAttempts != null { config.halfOpenAttempts } else { 3 },
+        threshold: getOr(config, "threshold", 5),
+        timeout: getOr(config, "timeout", 60000),  // 1 minute
+        halfOpenAttempts: getOr(config, "halfOpenAttempts", 3),
     }
     
     {
@@ -318,7 +322,7 @@ let createCircuitBreaker = (config) -> {
 
 // Create a retry engine instance
 let createRetryEngine = (policy) -> {
-    let finalPolicy = if policy != null {
+    let finalPolicy = if policy {
         createCustomRetryPolicy(policy)
     } else {
         defaultRetryPolicy

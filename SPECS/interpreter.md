@@ -195,16 +195,25 @@ Ordering requires comparable keys; otherwise runtime error.
 
 - Terminates the entire program immediately.
 
-### Recoverable errors (`? { ... }`)
+### Recoverable errors (`? ...`)
 
-- Only call expressions may use `? { ... }`.
-- If the call succeeds, its value is returned.
-- If the call fails with a recoverable error, the block runs and its value is returned.
-- Inside the block, `error` is bound to `{ kind: String, message: String }`.
-- Non-recoverable runtime errors still call `exit()` immediately.
+- `?` may be applied to any expression.
+- Fallback may be either:
+  - a block/object form: `target ? { ... }`
+  - a direct expression: `target ? fallbackExpr`
+- If the target expression succeeds, its value is returned.
+- If the target expression fails with either:
+  - `RecoverableError` (builtin recoverable errors), or
+  - `RuntimeError`,
+  the fallback block runs and its value is returned.
+- Inside the fallback block, `error` is bound to `{ kind: String, message: String }`.
+  - Runtime errors use `kind = "runtime"`.
+  - Builtin recoverable errors keep their specific `kind` (for example `decodeJson`, `http`, `fail`).
 
-Recoverable error sources:
-- `decodeJson`, `readFile`, `writeFile`, `appendFile`, `deleteFile`, `exists`, `listDir`, `http`, `fail`.
+Errors not catchable by `?`:
+- `exit(...)` (explicit hard stop)
+- parse errors
+- control-flow misuse (`break`/`continue` outside loop)
 
 Example:
 
@@ -213,7 +222,23 @@ let parsed = decodeJson(raw) ? {
     log("bad json:", error.message)
     { foo: "default" }
 }
+
+let trace = json.headers["X-Amzn-Trace-Id"] ? "<missing>"
 ```
+
+### Task error mode
+
+Interpreter option:
+- `allow-recoverable-tasks` (`Bool`, default `false`)
+
+Task behavior when `allow-recoverable-tasks = false` (default):
+- Current behavior is preserved: a runtime error inside a spawned task (`&`) terminates the process.
+
+Task behavior when `allow-recoverable-tasks = true`:
+- Runtime errors in spawned tasks are stored on the task handle instead of terminating the process immediately.
+- The error surfaces when awaiting (`wait task`) and can then be recovered with `?`.
+- Un-awaited failed tasks are reported as unhandled task failures (at least logged once).
+- This option only affects task execution paths (`&` and task continuations such as `then`).
 
 ## Pattern Matching Semantics
 
@@ -424,8 +449,10 @@ Implementation details (current runtime):
 - Tasks are backed by Go goroutines (not a custom event loop yet).
 - `wait` blocks the goroutine; `sleep` uses `time.Sleep`; `send`/`recv` block on a Go channel.
 - Race tasks return the first result but do not cancel losers yet (results are ignored).
-- Runtime errors call `exit()` immediately, including inside spawned tasks.
-- Recoverable errors are only produced by specific builtins and can be handled with `? { ... }`.
+- `? { ... }` can recover both runtime errors and builtin recoverable errors.
+- Runtime errors inside spawned tasks are controlled by `allow-recoverable-tasks`:
+  - `false` (default): fail-fast process exit.
+  - `true`: task stores error; error surfaces on `wait`; failed un-awaited tasks are logged.
 
 ## Built-in Functions (Assumed)
 
