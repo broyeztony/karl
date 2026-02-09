@@ -258,9 +258,27 @@ func (p *Partial) Inspect() string {
 
 type Task struct {
 	ResultCh chan taskResult
+
+	mu       sync.Mutex
 	done     bool
 	result   Value
 	err      error
+	observed bool
+
+	internal bool
+
+	// Cancellation is cooperative. A task only stops when it reaches a yield
+	// point (wait/recv/sleep/http/...) where we check cancelCh.
+	cancelOnce sync.Once
+	cancelCh   chan struct{}
+
+	// Bookkeeping for structured cancellation (parent cancels children).
+	parent   *Task
+	children []*Task
+
+	// Used for formatting task errors (each task captures the file it was spawned from).
+	source   string
+	filename string
 }
 
 func (t *Task) Type() ValueType { return TASK }

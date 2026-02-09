@@ -230,19 +230,17 @@ let parsed = decodeJson(raw) ? {
 let trace = json.headers["X-Amzn-Trace-Id"] ? "<missing>"
 ```
 
-### Task error mode
+### Task failures
 
-Interpreter option:
-- `allow-recoverable-tasks` (`Bool`, default `false`)
+- Tasks are futures: they complete with either a **value** or an **error**.
+- If a spawned task hits a `RuntimeError` or `RecoverableError`, the error is **stored on the task handle**.
+- The error surfaces when awaiting (`wait task`) and can be recovered with `?`.
+- If a task fails and nobody ever awaits it, the interpreter reports it as an **unhandled task failure** (the run fails).
 
-Task behavior when `allow-recoverable-tasks = false` (default):
-- Current behavior is preserved: a runtime error inside a spawned task (`&`) terminates the process.
-
-Task behavior when `allow-recoverable-tasks = true`:
-- Runtime errors in spawned tasks are stored on the task handle instead of terminating the process immediately.
-- The error surfaces when awaiting (`wait task`) and can then be recovered with `?`.
-- Un-awaited failed tasks are reported as unhandled task failures (at least logged once).
-- This option only affects task execution paths (`&` and task continuations such as `then`).
+Cancellation:
+- `task.cancel()` requests cancellation for the task (and its children).
+- Cancellation is cooperative; it takes effect at yield points (`wait`, `send`, `recv`, `sleep`, `http`, ...).
+- Awaiting a canceled task throws a `RecoverableError` with `kind = "canceled"`.
 
 ## Pattern Matching Semantics
 
@@ -375,8 +373,7 @@ JoinTask result: [A, B, C] (preserves input order)
 
 - `| { call1(), call2(), ... }` spawns tasks and returns a Task handle.
 - `wait` on that handle yields the first completed result.
-- Remaining tasks are intended to be cancelled; current runtime lets them continue
-  (results are ignored).
+- Remaining tasks are cancelled automatically (cooperative cancellation).
 
 Implementation details (target behavior):
 
@@ -451,12 +448,12 @@ Implementation details (current runtime):
 
 - Implemented in `interpreter/` with a recursive evaluator over the AST.
 - Tasks are backed by Go goroutines (not a custom event loop yet).
-- `wait` blocks the goroutine; `sleep` uses `time.Sleep`; `send`/`recv` block on a Go channel.
-- Race tasks return the first result but do not cancel losers yet (results are ignored).
+- `wait` blocks the goroutine.
+- `sleep`, `send`, `recv`, and `http` are cancelable (cooperative cancellation).
+- Task failures are stored on the task handle and surface on `wait` (and may be recovered with `?`).
+- Race tasks cancel losers; join tasks cancel remaining work on first error (cooperative cancellation).
 - `? { ... }` can recover both runtime errors and builtin recoverable errors.
-- Runtime errors inside spawned tasks are controlled by `allow-recoverable-tasks`:
-  - `false` (default): fail-fast process exit.
-  - `true`: task stores error; error surfaces on `wait`; failed un-awaited tasks are logged.
+- Un-awaited failed tasks are reported as unhandled task failures.
 
 ## Built-in Functions (Assumed)
 

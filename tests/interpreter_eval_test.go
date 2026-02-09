@@ -24,10 +24,6 @@ var NullValue = interpreter.NullValue
 var Equivalent = interpreter.Equivalent
 
 func evalInput(t *testing.T, input string) (Value, error) {
-	return evalInputWithOptions(t, input, false)
-}
-
-func evalInputWithOptions(t *testing.T, input string, allowRecoverableTasks bool) (Value, error) {
 	t.Helper()
 	p := parser.New(lexer.New(input))
 	program := p.ParseProgram()
@@ -39,7 +35,6 @@ func evalInputWithOptions(t *testing.T, input string, allowRecoverableTasks bool
 	}
 
 	eval := interpreter.NewEvaluator()
-	eval.SetAllowRecoverableTasks(allowRecoverableTasks)
 	env := interpreter.NewBaseEnvironment()
 	val, sig, err := eval.Eval(program, env)
 	if sig != nil {
@@ -51,15 +46,6 @@ func evalInputWithOptions(t *testing.T, input string, allowRecoverableTasks bool
 func mustEval(t *testing.T, input string) Value {
 	t.Helper()
 	val, err := evalInput(t, input)
-	if err != nil {
-		t.Fatalf("eval error: %v", err)
-	}
-	return val
-}
-
-func mustEvalWithOptions(t *testing.T, input string, allowRecoverableTasks bool) Value {
-	t.Helper()
-	val, err := evalInputWithOptions(t, input, allowRecoverableTasks)
 	if err != nil {
 		t.Fatalf("eval error: %v", err)
 	}
@@ -471,7 +457,7 @@ let t = & boom()
 let out = (wait t) ? { "fallback" }
 out
 `
-	val := mustEvalWithOptions(t, input, true)
+	val := mustEval(t, input)
 	assertString(t, val, "fallback")
 }
 
@@ -486,7 +472,7 @@ let next = t.then(v -> {
 let out = (wait next) ? { "fallback" }
 out
 `
-	val := mustEvalWithOptions(t, input, true)
+	val := mustEval(t, input)
 	assertString(t, val, "fallback")
 }
 
@@ -500,6 +486,23 @@ wait | { slow(), fast() }
 	assertInteger(t, val, 2)
 }
 
+func TestEvalRaceCancelsLosers(t *testing.T) {
+	input := `
+let state = { hits: 0 }
+let slow = () -> { sleep(50); state.hits = state.hits + 1; 1 }
+let fast = () -> 2
+let first = wait | { slow(), fast() }
+sleep(100);
+[first, state.hits]
+`
+	val := mustEval(t, input)
+	expected := &Array{Elements: []Value{
+		&Integer{Value: 2},
+		&Integer{Value: 0},
+	}}
+	assertEquivalent(t, val, expected)
+}
+
 func TestEvalSpawnGroup(t *testing.T) {
 	val := mustEval(t, "let a = () -> 1; let b = () -> 2; wait & { a(), b() }")
 	expected := &Array{Elements: []Value{
@@ -507,6 +510,60 @@ func TestEvalSpawnGroup(t *testing.T) {
 		&Integer{Value: 2},
 	}}
 	assertEquivalent(t, val, expected)
+}
+
+func TestEvalSpawnGroupCancelsOnError(t *testing.T) {
+	input := `
+let state = { hits: 0 }
+let boom = () -> fail("boom")
+let slow = () -> { sleep(50); state.hits = state.hits + 1; 1 }
+let t = & { boom(), slow() }
+let out = (wait t) ? { "fallback" }
+sleep(100);
+[out, state.hits]
+`
+	val := mustEval(t, input)
+	expected := &Array{Elements: []Value{
+		&String{Value: "fallback"},
+		&Integer{Value: 0},
+	}}
+	assertEquivalent(t, val, expected)
+}
+
+func TestEvalTaskCancel(t *testing.T) {
+	input := `
+let slow = () -> { sleep(1000); 1 }
+let t = & slow()
+t.cancel()
+let out = (wait t) ? { "canceled" }
+out
+`
+	val := mustEval(t, input)
+	assertString(t, val, "canceled")
+}
+
+func TestEvalUnhandledTaskFailureDetected(t *testing.T) {
+	input := `
+let boom = () -> { let obj = {}; obj.missing }
+& boom()
+sleep(10)
+1
+`
+	p := parser.New(lexer.New(input))
+	program := p.ParseProgram()
+	if errs := p.Errors(); len(errs) > 0 {
+		t.Fatalf("parse failed: %v", errs)
+	}
+
+	eval := interpreter.NewEvaluatorWithSourceAndFilename(input, "<test>")
+	env := interpreter.NewBaseEnvironment()
+	val, sig, err := eval.Eval(program, env)
+	if err != nil || sig != nil {
+		t.Fatalf("unexpected eval result: val=%v sig=%v err=%v", val, sig, err)
+	}
+	if err := eval.CheckUnhandledTaskFailures(); err == nil {
+		t.Fatalf("expected unhandled task failure error")
+	}
 }
 
 func TestEvalMapMethods(t *testing.T) {

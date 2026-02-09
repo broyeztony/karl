@@ -55,6 +55,7 @@ func (e *Evaluator) evalImportExpression(node *ast.ImportExpression, _ *Environm
 				filename:    module.filename,
 				projectRoot: e.projectRoot,
 				modules:     e.modules,
+				runtime:     e.runtime,
 			}
 			val, sig, err := moduleEval.Eval(module.program, moduleEnv)
 			if err != nil {

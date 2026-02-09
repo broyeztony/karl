@@ -81,6 +81,22 @@ func (e *ExitError) Error() string {
 	return fmt.Sprintf("exit: %s", e.Message)
 }
 
+// UnhandledTaskError is returned by the CLI runner when one or more tasks failed
+// and nobody awaited/handled them.
+//
+// The Messages are already formatted (they may reference different source files),
+// so callers should print Error() directly (and not re-wrap via FormatRuntimeError).
+type UnhandledTaskError struct {
+	Messages []string
+}
+
+func (e *UnhandledTaskError) Error() string {
+	if e == nil || len(e.Messages) == 0 {
+		return "unhandled task failure"
+	}
+	return "unhandled task failures:\n\n" + strings.Join(e.Messages, "\n\n")
+}
+
 func tokenFromNode(node ast.Node) *token.Token {
 	switch n := node.(type) {
 	case *ast.LetStatement:

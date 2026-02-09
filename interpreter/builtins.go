@@ -1,7 +1,9 @@
 package interpreter
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -149,7 +151,7 @@ func builtinBufferedChannel(_ *Evaluator, args []Value) (Value, error) {
 	return &Channel{Ch: make(chan Value, size.Value)}, nil
 }
 
-func builtinSleep(_ *Evaluator, args []Value) (Value, error) {
+func builtinSleep(e *Evaluator, args []Value) (Value, error) {
 	if len(args) != 1 {
 		return nil, &RuntimeError{Message: "sleep expects 1 argument"}
 	}
@@ -157,8 +159,24 @@ func builtinSleep(_ *Evaluator, args []Value) (Value, error) {
 	if !ok {
 		return nil, &RuntimeError{Message: "sleep expects integer milliseconds"}
 	}
-	time.Sleep(time.Duration(ms.Value) * time.Millisecond)
-	return UnitValue, nil
+
+	d := time.Duration(ms.Value) * time.Millisecond
+	if d <= 0 {
+		return UnitValue, nil
+	}
+	if e == nil || e.currentTask == nil {
+		time.Sleep(d)
+		return UnitValue, nil
+	}
+
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return UnitValue, nil
+	case <-e.currentTask.cancelCh:
+		return nil, canceledError()
+	}
 }
 
 func builtinLog(_ *Evaluator, args []Value) (Value, error) {
@@ -377,7 +395,7 @@ func builtinListDir(_ *Evaluator, args []Value) (Value, error) {
 	return &Array{Elements: out}, nil
 }
 
-func builtinHTTP(_ *Evaluator, args []Value) (Value, error) {
+func builtinHTTP(e *Evaluator, args []Value) (Value, error) {
 	if len(args) != 1 {
 		return nil, &RuntimeError{Message: "http expects request object"}
 	}
@@ -409,7 +427,25 @@ func builtinHTTP(_ *Evaluator, args []Value) (Value, error) {
 		}
 		body = strings.NewReader(bodyStr)
 	}
-	req, err := http.NewRequest(method, urlStr, body)
+
+	reqDone := make(chan struct{})
+	defer close(reqDone)
+
+	var ctx context.Context = context.Background()
+	var cancel context.CancelFunc
+	if e != nil && e.currentTask != nil {
+		ctx, cancel = context.WithCancel(context.Background())
+		go func() {
+			select {
+			case <-e.currentTask.cancelCh:
+				cancel()
+			case <-reqDone:
+				cancel()
+			}
+		}()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, urlStr, body)
 	if err != nil {
 		return nil, recoverableError("http", "http request error: "+err.Error())
 	}
@@ -424,6 +460,9 @@ func builtinHTTP(_ *Evaluator, args []Value) (Value, error) {
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil, canceledError()
+		}
 		return nil, recoverableError("http", "http error: "+err.Error())
 	}
 	defer resp.Body.Close()
@@ -597,20 +636,21 @@ func builtinThen(e *Evaluator, args []Value) (Value, error) {
 		return nil, &RuntimeError{Message: "then expects task as receiver"}
 	}
 	fn := args[1]
-	thenTask := newTask()
+	thenTask := e.newTask(e.currentTask, false)
+	thenEval := e.cloneForTask(thenTask)
 	go func() {
-		val, sig, err := taskAwait(task)
+		val, sig, err := taskAwaitWithCancel(task, thenTask.cancelCh)
 		if err != nil {
-			e.handleAsyncError(thenTask, err)
+			thenEval.handleAsyncError(thenTask, err)
 			return
 		}
 		if sig != nil {
 			exitProcess("break/continue outside loop")
 			return
 		}
-		res, sig, err := e.applyFunction(fn, []Value{val})
+		res, sig, err := thenEval.applyFunction(fn, []Value{val})
 		if err != nil {
-			e.handleAsyncError(thenTask, err)
+			thenEval.handleAsyncError(thenTask, err)
 			return
 		}
 		if sig != nil {
@@ -1298,7 +1338,7 @@ func builtinFind(e *Evaluator, args []Value) (Value, error) {
 	return NullValue, nil
 }
 
-func builtinSend(_ *Evaluator, args []Value) (Value, error) {
+func builtinSend(e *Evaluator, args []Value) (Value, error) {
 	if len(args) != 2 {
 		return nil, &RuntimeError{Message: "send expects channel and value"}
 	}
@@ -1309,11 +1349,20 @@ func builtinSend(_ *Evaluator, args []Value) (Value, error) {
 	if ch.Closed {
 		return nil, &RuntimeError{Message: "send on closed channel"}
 	}
-	ch.Ch <- args[1]
-	return UnitValue, nil
+
+	if e == nil || e.currentTask == nil {
+		ch.Ch <- args[1]
+		return UnitValue, nil
+	}
+	select {
+	case ch.Ch <- args[1]:
+		return UnitValue, nil
+	case <-e.currentTask.cancelCh:
+		return nil, canceledError()
+	}
 }
 
-func builtinRecv(_ *Evaluator, args []Value) (Value, error) {
+func builtinRecv(e *Evaluator, args []Value) (Value, error) {
 	if len(args) != 1 {
 		return nil, &RuntimeError{Message: "recv expects channel"}
 	}
@@ -1321,8 +1370,18 @@ func builtinRecv(_ *Evaluator, args []Value) (Value, error) {
 	if !ok {
 		return nil, &RuntimeError{Message: "recv expects channel"}
 	}
-	val, ok := <-ch.Ch
-	if !ok {
+	var val Value
+	var okRecv bool
+	if e == nil || e.currentTask == nil {
+		val, okRecv = <-ch.Ch
+	} else {
+		select {
+		case val, okRecv = <-ch.Ch:
+		case <-e.currentTask.cancelCh:
+			return nil, canceledError()
+		}
+	}
+	if !okRecv {
 		return &Array{Elements: []Value{NullValue, &Boolean{Value: true}}}, nil
 	}
 	return &Array{Elements: []Value{val, &Boolean{Value: false}}}, nil
