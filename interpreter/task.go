@@ -25,10 +25,6 @@ func (t *Task) complete(value Value, err error) {
 	t.ResultCh <- taskResult{value: value, err: err}
 }
 
-func taskAwait(t *Task) (Value, *Signal, error) {
-	return taskAwaitWithCancel(t, nil, nil)
-}
-
 func taskAwaitWithCancel(t *Task, cancelCh <-chan struct{}, runtime *runtimeState) (Value, *Signal, error) {
 	if t == nil {
 		return nil, nil, &RuntimeError{Message: "wait expects task"}

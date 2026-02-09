@@ -454,7 +454,6 @@ func builtinHTTP(e *Evaluator, args []Value) (Value, error) {
 	reqDone := make(chan struct{})
 	defer close(reqDone)
 
-	var ctx context.Context = context.Background()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancelCh := (<-chan struct{})(nil)
 	if e != nil && e.currentTask != nil {

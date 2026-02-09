@@ -102,10 +102,6 @@ func (e *Evaluator) handleAsyncError(task *Task, err error) {
 	e.runtime.setFatalTaskFailure(&UnhandledTaskError{Messages: []string{formatted}})
 }
 
-func (e *Evaluator) formatError(err error) string {
-	return FormatRuntimeError(err, e.source, e.filename)
-}
-
 func (e *Evaluator) CheckUnhandledTaskFailures() error {
 	if e.runtime == nil {
 		return nil
