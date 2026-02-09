@@ -235,7 +235,9 @@ let trace = json.headers["X-Amzn-Trace-Id"] ? "<missing>"
 - Tasks are futures: they complete with either a **value** or an **error**.
 - If a spawned task hits a `RuntimeError` or `RecoverableError`, the error is **stored on the task handle**.
 - The error surfaces when awaiting (`wait task`) and can be recovered with `?`.
-- If a task fails and nobody ever awaits it, the interpreter reports it as an **unhandled task failure** (the run fails).
+- Task failure policy controls detached/unobserved failures:
+  - `fail-fast` (default): run fails quickly when an unobserved non-internal task fails.
+  - `defer`: report unobserved failures at program end as **unhandled task failures**.
 
 Cancellation:
 - `task.cancel()` requests cancellation for the task (and its children).
@@ -451,9 +453,10 @@ Implementation details (current runtime):
 - `wait` blocks the goroutine.
 - `sleep`, `send`, `recv`, and `http` are cancelable (cooperative cancellation).
 - Task failures are stored on the task handle and surface on `wait` (and may be recovered with `?`).
+- Default CLI policy is `fail-fast`; set `--task-failure-policy=defer` for deferred reporting.
 - Race tasks cancel losers; join tasks cancel remaining work on first error (cooperative cancellation).
 - `? { ... }` can recover both runtime errors and builtin recoverable errors.
-- Un-awaited failed tasks are reported as unhandled task failures.
+- In `defer` mode, un-awaited failed tasks are reported as unhandled task failures at program end.
 
 ## Built-in Functions (Assumed)
 
@@ -569,7 +572,7 @@ User-defined objects do not have method receivers; functions must take the objec
 The CLI can evaluate Karl source or print its AST:
 
 - `karl parse <file.k> [--format=pretty|json]`
-- `karl run <file.k>`
+- `karl run <file.k> [--task-failure-policy=fail-fast|defer]`
 - `cat <file.k> | karl run -`
 
 ## Known Limitations / Notes

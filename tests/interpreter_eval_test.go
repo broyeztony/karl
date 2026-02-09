@@ -542,7 +542,7 @@ out
 	assertString(t, val, "canceled")
 }
 
-func TestEvalUnhandledTaskFailureDetected(t *testing.T) {
+func TestEvalUnhandledTaskFailureFailFast(t *testing.T) {
 	input := `
 let boom = () -> { let obj = {}; obj.missing }
 & boom()
@@ -558,11 +558,41 @@ sleep(10)
 	eval := interpreter.NewEvaluatorWithSourceAndFilename(input, "<test>")
 	env := interpreter.NewBaseEnvironment()
 	val, sig, err := eval.Eval(program, env)
+	if sig != nil {
+		t.Fatalf("unexpected signal: %v", sig)
+	}
+	if err == nil {
+		t.Fatalf("expected fail-fast unhandled task failure, got value=%v", val)
+	}
+	if _, ok := err.(*interpreter.UnhandledTaskError); !ok {
+		t.Fatalf("expected UnhandledTaskError, got %T (%v)", err, err)
+	}
+}
+
+func TestEvalUnhandledTaskFailureDeferred(t *testing.T) {
+	input := `
+let boom = () -> { let obj = {}; obj.missing }
+& boom()
+sleep(10)
+1
+`
+	p := parser.New(lexer.New(input))
+	program := p.ParseProgram()
+	if errs := p.Errors(); len(errs) > 0 {
+		t.Fatalf("parse failed: %v", errs)
+	}
+
+	eval := interpreter.NewEvaluatorWithSourceAndFilename(input, "<test>")
+	if err := eval.SetTaskFailurePolicy(interpreter.TaskFailurePolicyDefer); err != nil {
+		t.Fatalf("set policy failed: %v", err)
+	}
+	env := interpreter.NewBaseEnvironment()
+	val, sig, err := eval.Eval(program, env)
 	if err != nil || sig != nil {
-		t.Fatalf("unexpected eval result: val=%v sig=%v err=%v", val, sig, err)
+		t.Fatalf("unexpected eval result in defer mode: val=%v sig=%v err=%v", val, sig, err)
 	}
 	if err := eval.CheckUnhandledTaskFailures(); err == nil {
-		t.Fatalf("expected unhandled task failure error")
+		t.Fatalf("expected deferred unhandled task failure error")
 	}
 }
 

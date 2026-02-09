@@ -11,9 +11,10 @@ Core operators:
 
 Errors:
 - A task completes with either a **value** or an **error**.
-- Errors **do not crash the process immediately**: they are stored on the task and surface on `wait`.
+- Errors are stored on the task and surface on `wait`.
 - Use `? { ... }` (or `? fallbackExpr`) around `wait ...` to recover.
-- If a task fails and nobody ever awaits it, `karl run` fails with **unhandled task failures**.
+- Default policy is `fail-fast`: detached unobserved task failures fail the run quickly.
+- You can opt into deferred reporting with `karl run ... --task-failure-policy=defer`.
 
 Cancellation:
 - `task.cancel()` requests cancellation for a task (and its children).
@@ -28,5 +29,5 @@ Suggested reading order:
 4) `race_timeout.k`
 5) `cancellation.k`
 6) `channels_and_cancel.k`
-7) `unhandled_failures.k`
-
+7) `timeout_wrapper.k`
+8) `unhandled_failures.k`

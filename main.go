@@ -37,7 +37,7 @@ func main() {
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n")
 	fmt.Fprintf(os.Stderr, "  karl parse <file.k> [--format=pretty|json]\n")
-	fmt.Fprintf(os.Stderr, "  karl run <file.k>\n")
+	fmt.Fprintf(os.Stderr, "  karl run <file.k> [--task-failure-policy=fail-fast|defer]\n")
 	fmt.Fprintf(os.Stderr, "  <file> can be '-' to read from stdin\n")
 	fmt.Fprintf(os.Stderr, "  Use \"karl <command> --help\" for command help\n")
 }
@@ -89,7 +89,7 @@ func parseCommand(args []string) int {
 }
 
 func runCommand(args []string) int {
-	positional, help, err := parseRunArgs(args)
+	taskFailurePolicy, positional, help, err := parseRunArgs(args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		runUsage()
@@ -118,7 +118,7 @@ func runCommand(args []string) int {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return 1
 	}
-	val, err := runProgram(program, string(data), filename)
+	val, err := runProgram(program, string(data), filename, taskFailurePolicy)
 	if err != nil {
 		if ute, ok := err.(*interpreter.UnhandledTaskError); ok {
 			fmt.Fprintln(os.Stderr, ute.Error())
@@ -143,8 +143,10 @@ func parseUsage() {
 
 func runUsage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n")
-	fmt.Fprintf(os.Stderr, "  karl run <file.k>\n")
+	fmt.Fprintf(os.Stderr, "  karl run <file.k> [--task-failure-policy=fail-fast|defer]\n")
 	fmt.Fprintf(os.Stderr, "  <file> can be '-' to read from stdin\n")
+	fmt.Fprintf(os.Stderr, "\nOptions:\n")
+	fmt.Fprintf(os.Stderr, "  --task-failure-policy string   task failure behavior: fail-fast|defer (default \"fail-fast\")\n")
 }
 
 func parseParseArgs(args []string) (string, []string, bool, error) {
@@ -176,21 +178,34 @@ func parseParseArgs(args []string) (string, []string, bool, error) {
 	return format, positional, false, nil
 }
 
-func parseRunArgs(args []string) ([]string, bool, error) {
+func parseRunArgs(args []string) (string, []string, bool, error) {
+	taskFailurePolicy := interpreter.TaskFailurePolicyFailFast
 	positional := []string{}
-	for _, arg := range args {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
 		switch {
 		case arg == "-h" || arg == "--help":
-			return positional, true, nil
+			return taskFailurePolicy, positional, true, nil
+		case strings.HasPrefix(arg, "--task-failure-policy="):
+			taskFailurePolicy = strings.TrimPrefix(arg, "--task-failure-policy=")
+		case arg == "--task-failure-policy":
+			if i+1 >= len(args) {
+				return taskFailurePolicy, positional, false, fmt.Errorf("--task-failure-policy requires a value")
+			}
+			taskFailurePolicy = args[i+1]
+			i++
 		case arg == "-":
 			positional = append(positional, arg)
 		case strings.HasPrefix(arg, "-"):
-			return positional, false, fmt.Errorf("unknown flag: %s", arg)
+			return taskFailurePolicy, positional, false, fmt.Errorf("unknown flag: %s", arg)
 		default:
 			positional = append(positional, arg)
 		}
 	}
-	return positional, false, nil
+	if taskFailurePolicy != interpreter.TaskFailurePolicyFailFast && taskFailurePolicy != interpreter.TaskFailurePolicyDefer {
+		return taskFailurePolicy, positional, false, fmt.Errorf("invalid --task-failure-policy: %s", taskFailurePolicy)
+	}
+	return taskFailurePolicy, positional, false, nil
 }
 
 func readInput(path string) ([]byte, error) {
@@ -226,8 +241,11 @@ func parseProgram(data []byte, filename string) (*ast.Program, error) {
 	return program, nil
 }
 
-func runProgram(program *ast.Program, source string, filename string) (interpreter.Value, error) {
+func runProgram(program *ast.Program, source string, filename string, taskFailurePolicy string) (interpreter.Value, error) {
 	eval := interpreter.NewEvaluatorWithSourceAndFilename(source, filename)
+	if err := eval.SetTaskFailurePolicy(taskFailurePolicy); err != nil {
+		return nil, err
+	}
 	env := interpreter.NewBaseEnvironment()
 	val, sig, err := eval.Eval(program, env)
 	if err != nil {

@@ -635,6 +635,9 @@ func builtinThen(e *Evaluator, args []Value) (Value, error) {
 	if !ok {
 		return nil, &RuntimeError{Message: "then expects task as receiver"}
 	}
+	// Register observation at chaining time so fail-fast does not treat this task
+	// as detached/unobserved while the continuation goroutine starts.
+	task.markObserved()
 	fn := args[1]
 	thenTask := e.newTask(e.currentTask, false)
 	thenEval := e.cloneForTask(thenTask)

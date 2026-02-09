@@ -1,5 +1,6 @@
 // Unhandled task failures:
-// - If a task fails and nobody ever awaits it, `karl run` fails with "unhandled task failures".
+// - Default mode is fail-fast: detached unobserved task failures fail the run quickly.
+// - In defer mode (`karl run ... --task-failure-policy=defer`), they are reported at program end.
 // - So either (1) wait it (and recover), or (2) make the task recover internally.
 
 let boom = () -> {

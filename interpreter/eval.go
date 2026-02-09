@@ -43,6 +43,13 @@ func (e *Evaluator) SetProjectRoot(root string) {
 	e.projectRoot = root
 }
 
+func (e *Evaluator) SetTaskFailurePolicy(policy string) error {
+	if e.runtime == nil {
+		e.runtime = newRuntimeState()
+	}
+	return e.runtime.setTaskFailurePolicy(policy)
+}
+
 func (e *Evaluator) cloneForTask(task *Task) *Evaluator {
 	return &Evaluator{
 		source:      e.source,
@@ -78,8 +85,21 @@ func (e *Evaluator) handleAsyncError(task *Task, err error) {
 		exitProcess(exitErr.Message)
 		return
 	}
-
+	if task == nil {
+		return
+	}
 	task.complete(nil, err)
+	if e.runtime == nil {
+		return
+	}
+	if e.runtime.getTaskFailurePolicy() != TaskFailurePolicyFailFast {
+		return
+	}
+	if task.internal || task.isObserved() {
+		return
+	}
+	formatted := FormatRuntimeError(err, task.source, task.filename)
+	e.runtime.setFatalTaskFailure(&UnhandledTaskError{Messages: []string{formatted}})
 }
 
 func (e *Evaluator) formatError(err error) string {
@@ -145,6 +165,11 @@ func errorValue(err error) Value {
 }
 
 func (e *Evaluator) Eval(node ast.Node, env *Environment) (Value, *Signal, error) {
+	if e.runtime != nil {
+		if err := e.runtime.getFatalTaskFailure(); err != nil {
+			return nil, nil, err
+		}
+	}
 	if e.currentTask != nil && e.currentTask.canceled() {
 		return nil, nil, canceledError()
 	}
@@ -160,6 +185,11 @@ func (e *Evaluator) Eval(node ast.Node, env *Environment) (Value, *Signal, error
 			if tok := tokenFromNode(node); tok != nil {
 				re.Token = tok
 			}
+		}
+	}
+	if err == nil && sig == nil && e.runtime != nil {
+		if fatalErr := e.runtime.getFatalTaskFailure(); fatalErr != nil {
+			return nil, nil, fatalErr
 		}
 	}
 	return val, sig, err
