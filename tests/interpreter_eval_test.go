@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"karl/interpreter"
 	"karl/lexer"
@@ -563,6 +564,49 @@ sleep(10)
 	}
 	if err == nil {
 		t.Fatalf("expected fail-fast unhandled task failure, got value=%v", val)
+	}
+	if _, ok := err.(*interpreter.UnhandledTaskError); !ok {
+		t.Fatalf("expected UnhandledTaskError, got %T (%v)", err, err)
+	}
+}
+
+func TestEvalFailFastInterruptsLongSleep(t *testing.T) {
+	input := `
+let boom = () -> { sleep(20); let obj = {}; obj.missing }
+& boom()
+sleep(100000)
+1
+`
+	p := parser.New(lexer.New(input))
+	program := p.ParseProgram()
+	if errs := p.Errors(); len(errs) > 0 {
+		t.Fatalf("parse failed: %v", errs)
+	}
+
+	eval := interpreter.NewEvaluatorWithSourceAndFilename(input, "<test>")
+	env := interpreter.NewBaseEnvironment()
+
+	done := make(chan struct{})
+	var val Value
+	var sig *interpreter.Signal
+	var err error
+
+	go func() {
+		val, sig, err = eval.Eval(program, env)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("expected fail-fast to interrupt long sleep")
+	}
+
+	if sig != nil {
+		t.Fatalf("unexpected signal: %v", sig)
+	}
+	if err == nil {
+		t.Fatalf("expected fail-fast error, got value=%v", val)
 	}
 	if _, ok := err.(*interpreter.UnhandledTaskError); !ok {
 		t.Fatalf("expected UnhandledTaskError, got %T (%v)", err, err)

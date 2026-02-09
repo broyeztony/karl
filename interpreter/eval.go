@@ -561,7 +561,7 @@ func (e *Evaluator) evalAwaitExpression(node *ast.AwaitExpression, env *Environm
 	if e.currentTask != nil {
 		cancelCh = e.currentTask.cancelCh
 	}
-	return taskAwaitWithCancel(task, cancelCh)
+	return taskAwaitWithCancel(task, cancelCh, e.runtime)
 }
 
 func (e *Evaluator) evalRecoverExpression(node *ast.RecoverExpression, env *Environment) (Value, *Signal, error) {
@@ -1203,7 +1203,7 @@ func (e *Evaluator) evalRaceExpression(node *ast.RaceExpression, env *Environmen
 		results := make(chan result, len(children))
 		for _, child := range children {
 			go func(t *Task) {
-				val, sig, err := taskAwaitWithCancel(t, raceTask.cancelCh)
+				val, sig, err := taskAwaitWithCancel(t, raceTask.cancelCh, e.runtime)
 				results <- result{value: val, sig: sig, err: err}
 			}(child)
 		}
@@ -1258,7 +1258,7 @@ func (e *Evaluator) evalSpawnExpression(node *ast.SpawnExpression, env *Environm
 		resultsCh := make(chan result, len(children))
 		for i, child := range children {
 			go func(idx int, t *Task) {
-				val, sig, err := taskAwaitWithCancel(t, join.cancelCh)
+				val, sig, err := taskAwaitWithCancel(t, join.cancelCh, e.runtime)
 				resultsCh <- result{idx: idx, value: val, sig: sig, err: err}
 			}(i, child)
 		}

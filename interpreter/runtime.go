@@ -21,12 +21,15 @@ type runtimeState struct {
 	tasks             map[*Task]struct{}
 	taskFailurePolicy string
 	fatalTaskFailure  error
+	fatalOnce         sync.Once
+	fatalCh           chan struct{}
 }
 
 func newRuntimeState() *runtimeState {
 	return &runtimeState{
 		tasks:             make(map[*Task]struct{}),
 		taskFailurePolicy: TaskFailurePolicyFailFast,
+		fatalCh:           make(chan struct{}),
 	}
 }
 
@@ -82,11 +85,18 @@ func (r *runtimeState) setFatalTaskFailure(err error) {
 	if r == nil || err == nil {
 		return
 	}
+	shouldSignal := false
 	r.mu.Lock()
 	if r.fatalTaskFailure == nil {
 		r.fatalTaskFailure = err
+		shouldSignal = true
 	}
 	r.mu.Unlock()
+	if shouldSignal {
+		r.fatalOnce.Do(func() {
+			close(r.fatalCh)
+		})
+	}
 }
 
 func (r *runtimeState) getFatalTaskFailure() error {
@@ -97,4 +107,14 @@ func (r *runtimeState) getFatalTaskFailure() error {
 	err := r.fatalTaskFailure
 	r.mu.Unlock()
 	return err
+}
+
+func (r *runtimeState) fatalSignal() <-chan struct{} {
+	if r == nil {
+		return nil
+	}
+	r.mu.Lock()
+	ch := r.fatalCh
+	r.mu.Unlock()
+	return ch
 }

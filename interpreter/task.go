@@ -26,10 +26,10 @@ func (t *Task) complete(value Value, err error) {
 }
 
 func taskAwait(t *Task) (Value, *Signal, error) {
-	return taskAwaitWithCancel(t, nil)
+	return taskAwaitWithCancel(t, nil, nil)
 }
 
-func taskAwaitWithCancel(t *Task, cancelCh <-chan struct{}) (Value, *Signal, error) {
+func taskAwaitWithCancel(t *Task, cancelCh <-chan struct{}, runtime *runtimeState) (Value, *Signal, error) {
 	if t == nil {
 		return nil, nil, &RuntimeError{Message: "wait expects task"}
 	}
@@ -49,13 +49,20 @@ func taskAwaitWithCancel(t *Task, cancelCh <-chan struct{}) (Value, *Signal, err
 	t.mu.Unlock()
 
 	var out taskResult
-	if cancelCh == nil {
+	fatalCh := runtime.fatalSignal()
+
+	if cancelCh == nil && fatalCh == nil {
 		out = <-t.ResultCh
 	} else {
 		select {
 		case out = <-t.ResultCh:
 		case <-cancelCh:
 			return nil, nil, canceledError()
+		case <-fatalCh:
+			if err := runtime.getFatalTaskFailure(); err != nil {
+				return nil, nil, err
+			}
+			return nil, nil, &RuntimeError{Message: "runtime terminated"}
 		}
 	}
 

@@ -106,6 +106,22 @@ func recoverableError(kind string, msg string) *RecoverableError {
 	return &RecoverableError{Kind: kind, Message: msg}
 }
 
+func runtimeFatalSignal(e *Evaluator) <-chan struct{} {
+	if e == nil || e.runtime == nil {
+		return nil
+	}
+	return e.runtime.fatalSignal()
+}
+
+func runtimeFatalError(e *Evaluator) error {
+	if e != nil && e.runtime != nil {
+		if err := e.runtime.getFatalTaskFailure(); err != nil {
+			return err
+		}
+	}
+	return &RuntimeError{Message: "runtime terminated"}
+}
+
 func builtinExit(_ *Evaluator, args []Value) (Value, error) {
 	msg := ""
 	if len(args) > 0 {
@@ -164,7 +180,12 @@ func builtinSleep(e *Evaluator, args []Value) (Value, error) {
 	if d <= 0 {
 		return UnitValue, nil
 	}
-	if e == nil || e.currentTask == nil {
+	fatalCh := runtimeFatalSignal(e)
+	cancelCh := (<-chan struct{})(nil)
+	if e != nil && e.currentTask != nil {
+		cancelCh = e.currentTask.cancelCh
+	}
+	if cancelCh == nil && fatalCh == nil {
 		time.Sleep(d)
 		return UnitValue, nil
 	}
@@ -174,8 +195,10 @@ func builtinSleep(e *Evaluator, args []Value) (Value, error) {
 	select {
 	case <-timer.C:
 		return UnitValue, nil
-	case <-e.currentTask.cancelCh:
+	case <-cancelCh:
 		return nil, canceledError()
+	case <-fatalCh:
+		return nil, runtimeFatalError(e)
 	}
 }
 
@@ -432,18 +455,22 @@ func builtinHTTP(e *Evaluator, args []Value) (Value, error) {
 	defer close(reqDone)
 
 	var ctx context.Context = context.Background()
-	var cancel context.CancelFunc
+	ctx, cancel := context.WithCancel(context.Background())
+	cancelCh := (<-chan struct{})(nil)
 	if e != nil && e.currentTask != nil {
-		ctx, cancel = context.WithCancel(context.Background())
-		go func() {
-			select {
-			case <-e.currentTask.cancelCh:
-				cancel()
-			case <-reqDone:
-				cancel()
-			}
-		}()
+		cancelCh = e.currentTask.cancelCh
 	}
+	fatalCh := runtimeFatalSignal(e)
+	go func() {
+		select {
+		case <-cancelCh:
+			cancel()
+		case <-fatalCh:
+			cancel()
+		case <-reqDone:
+			cancel()
+		}
+	}()
 
 	req, err := http.NewRequestWithContext(ctx, method, urlStr, body)
 	if err != nil {
@@ -461,6 +488,20 @@ func builtinHTTP(e *Evaluator, args []Value) (Value, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
+			if cancelCh != nil {
+				select {
+				case <-cancelCh:
+					return nil, canceledError()
+				default:
+				}
+			}
+			if fatalCh != nil {
+				select {
+				case <-fatalCh:
+					return nil, runtimeFatalError(e)
+				default:
+				}
+			}
 			return nil, canceledError()
 		}
 		return nil, recoverableError("http", "http error: "+err.Error())
@@ -642,7 +683,7 @@ func builtinThen(e *Evaluator, args []Value) (Value, error) {
 	thenTask := e.newTask(e.currentTask, false)
 	thenEval := e.cloneForTask(thenTask)
 	go func() {
-		val, sig, err := taskAwaitWithCancel(task, thenTask.cancelCh)
+		val, sig, err := taskAwaitWithCancel(task, thenTask.cancelCh, e.runtime)
 		if err != nil {
 			thenEval.handleAsyncError(thenTask, err)
 			return
@@ -1353,15 +1394,23 @@ func builtinSend(e *Evaluator, args []Value) (Value, error) {
 		return nil, &RuntimeError{Message: "send on closed channel"}
 	}
 
-	if e == nil || e.currentTask == nil {
+	fatalCh := runtimeFatalSignal(e)
+	cancelCh := (<-chan struct{})(nil)
+	if e != nil && e.currentTask != nil {
+		cancelCh = e.currentTask.cancelCh
+	}
+
+	if cancelCh == nil && fatalCh == nil {
 		ch.Ch <- args[1]
 		return UnitValue, nil
 	}
 	select {
 	case ch.Ch <- args[1]:
 		return UnitValue, nil
-	case <-e.currentTask.cancelCh:
+	case <-cancelCh:
 		return nil, canceledError()
+	case <-fatalCh:
+		return nil, runtimeFatalError(e)
 	}
 }
 
@@ -1375,13 +1424,20 @@ func builtinRecv(e *Evaluator, args []Value) (Value, error) {
 	}
 	var val Value
 	var okRecv bool
-	if e == nil || e.currentTask == nil {
+	fatalCh := runtimeFatalSignal(e)
+	cancelCh := (<-chan struct{})(nil)
+	if e != nil && e.currentTask != nil {
+		cancelCh = e.currentTask.cancelCh
+	}
+	if cancelCh == nil && fatalCh == nil {
 		val, okRecv = <-ch.Ch
 	} else {
 		select {
 		case val, okRecv = <-ch.Ch:
-		case <-e.currentTask.cancelCh:
+		case <-cancelCh:
 			return nil, canceledError()
+		case <-fatalCh:
+			return nil, runtimeFatalError(e)
 		}
 	}
 	if !okRecv {
