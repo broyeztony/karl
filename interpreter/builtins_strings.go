@@ -2,6 +2,18 @@ package interpreter
 
 import "strings"
 
+func registerStringBuiltins() {
+	builtins["split"] = &Builtin{Name: "split", Fn: builtinSplit}
+	builtins["chars"] = &Builtin{Name: "chars", Fn: builtinChars}
+	builtins["trim"] = &Builtin{Name: "trim", Fn: builtinTrim}
+	builtins["toLower"] = &Builtin{Name: "toLower", Fn: builtinToLower}
+	builtins["toUpper"] = &Builtin{Name: "toUpper", Fn: builtinToUpper}
+	builtins["contains"] = &Builtin{Name: "contains", Fn: builtinContains}
+	builtins["startsWith"] = &Builtin{Name: "startsWith", Fn: builtinStartsWith}
+	builtins["endsWith"] = &Builtin{Name: "endsWith", Fn: builtinEndsWith}
+	builtins["replace"] = &Builtin{Name: "replace", Fn: builtinReplace}
+}
+
 func stringArg(val Value) (string, bool) {
 	switch v := val.(type) {
 	case *String:

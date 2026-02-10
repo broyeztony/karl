@@ -1,5 +1,12 @@
 package interpreter
 
+func registerAsyncBuiltins() {
+	builtins["then"] = &Builtin{Name: "then", Fn: builtinThen}
+	builtins["send"] = &Builtin{Name: "send", Fn: builtinSend}
+	builtins["recv"] = &Builtin{Name: "recv", Fn: builtinRecv}
+	builtins["done"] = &Builtin{Name: "done", Fn: builtinDone}
+}
+
 func builtinThen(e *Evaluator, args []Value) (Value, error) {
 	if len(args) != 2 {
 		return nil, &RuntimeError{Message: "then expects task and function"}

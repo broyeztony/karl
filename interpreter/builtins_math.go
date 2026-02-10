@@ -2,6 +2,20 @@ package interpreter
 
 import "math"
 
+func registerMathBuiltins() {
+	builtins["abs"] = &Builtin{Name: "abs", Fn: builtinAbs}
+	builtins["sqrt"] = &Builtin{Name: "sqrt", Fn: builtinSqrt}
+	builtins["pow"] = &Builtin{Name: "pow", Fn: builtinPow}
+	builtins["sin"] = &Builtin{Name: "sin", Fn: builtinSin}
+	builtins["cos"] = &Builtin{Name: "cos", Fn: builtinCos}
+	builtins["tan"] = &Builtin{Name: "tan", Fn: builtinTan}
+	builtins["floor"] = &Builtin{Name: "floor", Fn: builtinFloor}
+	builtins["ceil"] = &Builtin{Name: "ceil", Fn: builtinCeil}
+	builtins["min"] = &Builtin{Name: "min", Fn: builtinMin}
+	builtins["max"] = &Builtin{Name: "max", Fn: builtinMax}
+	builtins["clamp"] = &Builtin{Name: "clamp", Fn: builtinClamp}
+}
+
 func numberArg(val Value) (float64, bool, bool) {
 	switch v := val.(type) {
 	case *Integer:

@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+func registerJSONBuiltins() {
+	builtins["encodeJson"] = &Builtin{Name: "encodeJson", Fn: builtinEncodeJSON}
+	builtins["decodeJson"] = &Builtin{Name: "decodeJson", Fn: builtinDecodeJSON}
+}
+
 func builtinEncodeJSON(_ *Evaluator, args []Value) (Value, error) {
 	if len(args) != 1 {
 		return nil, &RuntimeError{Message: "encodeJson expects 1 argument"}

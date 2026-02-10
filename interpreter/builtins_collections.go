@@ -2,6 +2,22 @@ package interpreter
 
 import "sort"
 
+func registerCollectionBuiltins() {
+	builtins["map"] = &Builtin{Name: "map", Fn: builtinMap}
+	builtins["get"] = &Builtin{Name: "get", Fn: builtinMapGet}
+	builtins["set"] = &Builtin{Name: "set", Fn: builtinMapSet}
+	builtins["add"] = &Builtin{Name: "add", Fn: builtinSetAdd}
+	builtins["has"] = &Builtin{Name: "has", Fn: builtinMapHas}
+	builtins["delete"] = &Builtin{Name: "delete", Fn: builtinMapDelete}
+	builtins["keys"] = &Builtin{Name: "keys", Fn: builtinMapKeys}
+	builtins["values"] = &Builtin{Name: "values", Fn: builtinMapValues}
+	builtins["sort"] = &Builtin{Name: "sort", Fn: builtinSort}
+	builtins["filter"] = &Builtin{Name: "filter", Fn: builtinFilter}
+	builtins["reduce"] = &Builtin{Name: "reduce", Fn: builtinReduce}
+	builtins["sum"] = &Builtin{Name: "sum", Fn: builtinSum}
+	builtins["find"] = &Builtin{Name: "find", Fn: builtinFind}
+}
+
 func builtinMap(e *Evaluator, args []Value) (Value, error) {
 	if len(args) == 0 {
 		return &Map{Pairs: make(map[MapKey]Value)}, nil

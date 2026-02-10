@@ -9,6 +9,22 @@ import (
 	"time"
 )
 
+func registerRuntimeBuiltins() {
+	builtins["exit"] = &Builtin{Name: "exit", Fn: builtinExit}
+	builtins["fail"] = &Builtin{Name: "fail", Fn: builtinFail}
+	builtins["rendezvous"] = &Builtin{Name: "rendezvous", Fn: builtinChannel}
+	builtins["channel"] = &Builtin{Name: "channel", Fn: builtinChannel}
+	builtins["buffered"] = &Builtin{Name: "buffered", Fn: builtinBufferedChannel}
+	builtins["sleep"] = &Builtin{Name: "sleep", Fn: builtinSleep}
+	builtins["log"] = &Builtin{Name: "log", Fn: builtinLog}
+	builtins["str"] = &Builtin{Name: "str", Fn: builtinStr}
+	builtins["rand"] = &Builtin{Name: "rand", Fn: builtinRand}
+	builtins["randInt"] = &Builtin{Name: "randInt", Fn: builtinRandInt}
+	builtins["randFloat"] = &Builtin{Name: "randFloat", Fn: builtinRandFloat}
+	builtins["parseInt"] = &Builtin{Name: "parseInt", Fn: builtinParseInt}
+	builtins["now"] = &Builtin{Name: "now", Fn: builtinNow}
+}
+
 func runtimeFatalSignal(e *Evaluator) <-chan struct{} {
 	if e == nil || e.runtime == nil {
 		return nil

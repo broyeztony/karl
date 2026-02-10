@@ -8,6 +8,10 @@ import (
 	"strings"
 )
 
+func registerHTTPBuiltins() {
+	builtins["http"] = &Builtin{Name: "http", Fn: builtinHTTP}
+}
+
 func builtinHTTP(e *Evaluator, args []Value) (Value, error) {
 	if len(args) != 1 {
 		return nil, &RuntimeError{Message: "http expects request object"}

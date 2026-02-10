@@ -5,6 +5,15 @@ import (
 	"sort"
 )
 
+func registerFSBuiltins() {
+	builtins["readFile"] = &Builtin{Name: "readFile", Fn: builtinReadFile}
+	builtins["writeFile"] = &Builtin{Name: "writeFile", Fn: builtinWriteFile}
+	builtins["appendFile"] = &Builtin{Name: "appendFile", Fn: builtinAppendFile}
+	builtins["deleteFile"] = &Builtin{Name: "deleteFile", Fn: builtinDeleteFile}
+	builtins["exists"] = &Builtin{Name: "exists", Fn: builtinExists}
+	builtins["listDir"] = &Builtin{Name: "listDir", Fn: builtinListDir}
+}
+
 func builtinReadFile(_ *Evaluator, args []Value) (Value, error) {
 	if len(args) != 1 {
 		return nil, &RuntimeError{Message: "readFile expects path"}
