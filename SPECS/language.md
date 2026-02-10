@@ -468,8 +468,9 @@ let fastest = wait | {
 // - & { call1(), call2(), ... } spawns all calls concurrently and returns a Task handle of results in order.
 // - wait task waits for completion and yields the task result.
 // - | { call1(), call2(), ... } returns a Task handle for the first completed result.
-// - wait on that handle yields the first result; current runtime does not cancel the rest
-//   (losing tasks continue to run and their results are ignored).
+// - wait on that handle yields the first result; losing tasks are cancelled automatically
+//   (cooperative cancellation).
+// - task.cancel() requests cancellation for a task.
 // - Tasks communicate by returning values, shared immutable data, or rendezvous channels.
 // - If you need to know which task completed, return a tagged value from each task.
 

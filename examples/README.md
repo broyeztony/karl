@@ -25,6 +25,7 @@ Each example is intended to be standalone and to demonstrate one specific featur
 - `examples/features/truthy_falsy_comprehensive.k` - truthy/falsy across values and operators
 - `examples/features/concurrency_basic.k` - `&`, `|`, `then`, `wait`
 - `examples/features/concurrency_advanced.k` - rendezvous/channel send/recv
+- `examples/features/concurrency/` - deeper dive: join/race semantics, cancellation, and failure recovery
 - `examples/features/import_module.k` - module to import
 - `examples/features/import_use.k` - import factory usage
 - `examples/features/import_instances_module.k` - module with per-instance state

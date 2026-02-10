@@ -3,7 +3,6 @@ package interpreter
 import (
 	"fmt"
 	"karl/ast"
-	"os"
 	"sort"
 	"unicode/utf8"
 )
@@ -14,19 +13,20 @@ type Evaluator struct {
 	projectRoot string
 	modules     *moduleState
 
-	allowRecoverableTasks bool
+	runtime     *runtimeState
+	currentTask *Task
 }
 
 func NewEvaluator() *Evaluator {
-	return &Evaluator{modules: newModuleState()}
+	return &Evaluator{modules: newModuleState(), runtime: newRuntimeState()}
 }
 
 func NewEvaluatorWithSource(source string) *Evaluator {
-	return &Evaluator{source: source, modules: newModuleState()}
+	return &Evaluator{source: source, modules: newModuleState(), runtime: newRuntimeState()}
 }
 
 func NewEvaluatorWithSourceAndFilename(source string, filename string) *Evaluator {
-	return &Evaluator{source: source, filename: filename, modules: newModuleState()}
+	return &Evaluator{source: source, filename: filename, modules: newModuleState(), runtime: newRuntimeState()}
 }
 
 func NewEvaluatorWithSourceFilenameAndRoot(source string, filename string, root string) *Evaluator {
@@ -35,6 +35,7 @@ func NewEvaluatorWithSourceFilenameAndRoot(source string, filename string, root 
 		filename:    filename,
 		projectRoot: root,
 		modules:     newModuleState(),
+		runtime:     newRuntimeState(),
 	}
 }
 
@@ -42,8 +43,38 @@ func (e *Evaluator) SetProjectRoot(root string) {
 	e.projectRoot = root
 }
 
-func (e *Evaluator) SetAllowRecoverableTasks(allow bool) {
-	e.allowRecoverableTasks = allow
+func (e *Evaluator) SetTaskFailurePolicy(policy string) error {
+	if e.runtime == nil {
+		e.runtime = newRuntimeState()
+	}
+	return e.runtime.setTaskFailurePolicy(policy)
+}
+
+func (e *Evaluator) cloneForTask(task *Task) *Evaluator {
+	return &Evaluator{
+		source:      e.source,
+		filename:    e.filename,
+		projectRoot: e.projectRoot,
+		modules:     e.modules,
+		runtime:     e.runtime,
+		currentTask: task,
+	}
+}
+
+func (e *Evaluator) newTask(parent *Task, internal bool) *Task {
+	if e.runtime == nil {
+		e.runtime = newRuntimeState()
+	}
+	t := newTask()
+	t.internal = internal
+	t.parent = parent
+	t.source = e.source
+	t.filename = e.filename
+	if parent != nil {
+		parent.addChild(t)
+	}
+	e.runtime.registerTask(t)
+	return t
 }
 
 func (e *Evaluator) handleAsyncError(task *Task, err error) {
@@ -54,18 +85,50 @@ func (e *Evaluator) handleAsyncError(task *Task, err error) {
 		exitProcess(exitErr.Message)
 		return
 	}
-	if !e.allowRecoverableTasks {
-		exitProcess(e.formatError(err))
+	if task == nil {
 		return
 	}
-
 	task.complete(nil, err)
-	// Failed detached tasks must be visible even when nobody awaits them.
-	_, _ = os.Stderr.WriteString("[task error] " + e.formatError(err) + "\n")
+	if e.runtime == nil {
+		return
+	}
+	if e.runtime.getTaskFailurePolicy() != TaskFailurePolicyFailFast {
+		return
+	}
+	if task.internal || task.isObserved() {
+		return
+	}
+	formatted := FormatRuntimeError(err, task.source, task.filename)
+	e.runtime.setFatalTaskFailure(&UnhandledTaskError{Messages: []string{formatted}})
 }
 
-func (e *Evaluator) formatError(err error) string {
-	return FormatRuntimeError(err, e.source, e.filename)
+func (e *Evaluator) CheckUnhandledTaskFailures() error {
+	if e.runtime == nil {
+		return nil
+	}
+	tasks := e.runtime.snapshotTasks()
+	msgs := []string{}
+	for _, t := range tasks {
+		if t == nil || t.internal {
+			continue
+		}
+		if !t.isDone() || t.isObserved() {
+			continue
+		}
+		err := t.getError()
+		if err == nil {
+			continue
+		}
+		if re, ok := err.(*RecoverableError); ok && re.Kind == "canceled" {
+			continue
+		}
+		msgs = append(msgs, FormatRuntimeError(err, t.source, t.filename))
+	}
+	if len(msgs) == 0 {
+		return nil
+	}
+	sort.Strings(msgs)
+	return &UnhandledTaskError{Messages: msgs}
 }
 
 type queryRow struct {
@@ -98,6 +161,15 @@ func errorValue(err error) Value {
 }
 
 func (e *Evaluator) Eval(node ast.Node, env *Environment) (Value, *Signal, error) {
+	if e.runtime != nil {
+		if err := e.runtime.getFatalTaskFailure(); err != nil {
+			return nil, nil, err
+		}
+	}
+	if e.currentTask != nil && e.currentTask.canceled() {
+		return nil, nil, canceledError()
+	}
+
 	val, sig, err := e.evalNode(node, env)
 	if err != nil {
 		if re, ok := err.(*RuntimeError); ok && re.Token == nil {
@@ -109,6 +181,11 @@ func (e *Evaluator) Eval(node ast.Node, env *Environment) (Value, *Signal, error
 			if tok := tokenFromNode(node); tok != nil {
 				re.Token = tok
 			}
+		}
+	}
+	if err == nil && sig == nil && e.runtime != nil {
+		if fatalErr := e.runtime.getFatalTaskFailure(); fatalErr != nil {
+			return nil, nil, fatalErr
 		}
 	}
 	return val, sig, err
@@ -476,7 +553,11 @@ func (e *Evaluator) evalAwaitExpression(node *ast.AwaitExpression, env *Environm
 	if !ok {
 		return nil, nil, &RuntimeError{Message: "wait expects task"}
 	}
-	return taskAwait(task)
+	var cancelCh <-chan struct{}
+	if e.currentTask != nil {
+		cancelCh = e.currentTask.cancelCh
+	}
+	return taskAwaitWithCancel(task, cancelCh, e.runtime)
 }
 
 func (e *Evaluator) evalRecoverExpression(node *ast.RecoverExpression, env *Environment) (Value, *Signal, error) {
@@ -1098,71 +1179,113 @@ func compareForSort(left, right Value) bool {
 }
 
 func (e *Evaluator) evalRaceExpression(node *ast.RaceExpression, env *Environment) (Value, *Signal, error) {
-	tasks := []*Task{}
+	raceTask := e.newTask(e.currentTask, false)
+
+	children := make([]*Task, 0, len(node.Tasks))
 	for _, taskExpr := range node.Tasks {
-		task, err := e.spawnTask(taskExpr, env)
+		child, err := e.spawnTask(taskExpr, env, raceTask, true)
 		if err != nil {
 			return nil, nil, err
 		}
-		tasks = append(tasks, task)
+		children = append(children, child)
 	}
-	raceTask := newTask()
+
 	go func() {
-		results := make(chan taskResult, len(tasks))
-		for _, task := range tasks {
-			go func(t *Task) {
-				val, sig, err := taskAwait(t)
-				if err != nil {
-					results <- taskResult{value: nil, err: err}
-					return
-				}
-				if sig != nil {
-					results <- taskResult{value: nil, err: &RuntimeError{Message: "break/continue outside loop"}}
-					return
-				}
-				results <- taskResult{value: val, err: err}
-			}(task)
+		type result struct {
+			value Value
+			sig   *Signal
+			err   error
 		}
-		first := <-results
-		raceTask.complete(first.value, first.err)
+		results := make(chan result, len(children))
+		for _, child := range children {
+			go func(t *Task) {
+				val, sig, err := taskAwaitWithCancel(t, raceTask.cancelCh, e.runtime)
+				results <- result{value: val, sig: sig, err: err}
+			}(child)
+		}
+
+		select {
+		case <-raceTask.cancelCh:
+			// canceled by user or parent; Cancel() already completed the task.
+			return
+		case first := <-results:
+			// Cancel losers. Cancellation is cooperative; losers will stop at the next yield point.
+			raceTask.cancelChildren()
+			if first.sig != nil {
+				raceTask.complete(nil, &RuntimeError{Message: "break/continue outside loop"})
+				return
+			}
+			raceTask.complete(first.value, first.err)
+			return
+		}
 	}()
+
 	return raceTask, nil, nil
 }
 
 func (e *Evaluator) evalSpawnExpression(node *ast.SpawnExpression, env *Environment) (Value, *Signal, error) {
 	if node.Task != nil {
-		task, err := e.spawnTask(node.Task, env)
+		task, err := e.spawnTask(node.Task, env, e.currentTask, false)
 		if err != nil {
 			return nil, nil, err
 		}
 		return task, nil, nil
 	}
 
-	tasks := []*Task{}
+	join := e.newTask(e.currentTask, false)
+
+	children := make([]*Task, 0, len(node.Group))
 	for _, expr := range node.Group {
-		task, err := e.spawnTask(expr, env)
+		child, err := e.spawnTask(expr, env, join, true)
 		if err != nil {
 			return nil, nil, err
 		}
-		tasks = append(tasks, task)
+		children = append(children, child)
 	}
-	join := newTask()
+
 	go func() {
-		results := make([]Value, len(tasks))
-		for i, t := range tasks {
-			val, sig, err := taskAwait(t)
-			if err != nil {
-				join.complete(nil, err)
-				return
-			}
-			if sig != nil {
-				join.complete(nil, &RuntimeError{Message: "break/continue outside loop"})
-				return
-			}
-			results[i] = val
+		type result struct {
+			idx   int
+			value Value
+			sig   *Signal
+			err   error
 		}
-		join.complete(&Array{Elements: results}, nil)
+
+		resultsCh := make(chan result, len(children))
+		for i, child := range children {
+			go func(idx int, t *Task) {
+				val, sig, err := taskAwaitWithCancel(t, join.cancelCh, e.runtime)
+				resultsCh <- result{idx: idx, value: val, sig: sig, err: err}
+			}(i, child)
+		}
+
+		out := make([]Value, len(children))
+		remaining := len(children)
+		for remaining > 0 {
+			select {
+			case <-join.cancelCh:
+				// canceled by user or parent; Cancel() already completed the task.
+				return
+			case r := <-resultsCh:
+				if r.err != nil {
+					// Fail fast: cancel remaining children and surface the error on the join task.
+					join.cancelChildren()
+					join.complete(nil, r.err)
+					return
+				}
+				if r.sig != nil {
+					join.cancelChildren()
+					join.complete(nil, &RuntimeError{Message: "break/continue outside loop"})
+					return
+				}
+				out[r.idx] = r.value
+				remaining--
+			}
+		}
+
+		join.complete(&Array{Elements: out}, nil)
 	}()
+
 	return join, nil, nil
 }
 
@@ -1177,12 +1300,13 @@ func (e *Evaluator) evalBreakExpression(node *ast.BreakExpression, env *Environm
 	return val, &Signal{Type: SignalBreak, Value: val}, nil
 }
 
-func (e *Evaluator) spawnTask(expr ast.Expression, env *Environment) (*Task, error) {
-	task := newTask()
+func (e *Evaluator) spawnTask(expr ast.Expression, env *Environment, parent *Task, internal bool) (*Task, error) {
+	task := e.newTask(parent, internal)
+	taskEval := e.cloneForTask(task)
 	go func() {
-		val, sig, err := e.Eval(expr, env)
+		val, sig, err := taskEval.Eval(expr, env)
 		if err != nil {
-			e.handleAsyncError(task, err)
+			taskEval.handleAsyncError(task, err)
 			return
 		}
 		if sig != nil {
@@ -1432,6 +1556,17 @@ func (e *Evaluator) taskMethod(t *Task, name string) (Value, *Signal, error) {
 			return nil, nil, &RuntimeError{Message: "unknown builtin: " + name}
 		}
 		return &Builtin{Name: name, Fn: bindReceiver(builtin.Fn, t)}, nil, nil
+	case "cancel":
+		return &Builtin{
+			Name: "cancel",
+			Fn: func(_ *Evaluator, args []Value) (Value, error) {
+				if len(args) != 0 {
+					return nil, &RuntimeError{Message: "cancel expects no arguments"}
+				}
+				t.Cancel()
+				return UnitValue, nil
+			},
+		}, nil, nil
 	default:
 		return nil, nil, &RuntimeError{Message: "unknown task member: " + name}
 	}
