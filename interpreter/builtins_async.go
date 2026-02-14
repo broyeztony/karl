@@ -58,10 +58,7 @@ func builtinSend(e *Evaluator, args []Value) (Value, error) {
 	}
 
 	fatalCh := runtimeFatalSignal(e)
-	cancelCh := (<-chan struct{})(nil)
-	if e != nil && e.currentTask != nil {
-		cancelCh = e.currentTask.cancelCh
-	}
+	cancelCh := runtimeCancelSignal(e)
 
 	if cancelCh == nil && fatalCh == nil {
 		ch.Ch <- args[1]
@@ -88,10 +85,7 @@ func builtinRecv(e *Evaluator, args []Value) (Value, error) {
 	var val Value
 	var okRecv bool
 	fatalCh := runtimeFatalSignal(e)
-	cancelCh := (<-chan struct{})(nil)
-	if e != nil && e.currentTask != nil {
-		cancelCh = e.currentTask.cancelCh
-	}
+	cancelCh := runtimeCancelSignal(e)
 	if cancelCh == nil && fatalCh == nil {
 		val, okRecv = <-ch.Ch
 	} else {

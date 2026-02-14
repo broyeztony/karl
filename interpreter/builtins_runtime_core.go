@@ -24,6 +24,13 @@ func runtimeFatalSignal(e *Evaluator) <-chan struct{} {
 	return e.runtime.fatalSignal()
 }
 
+func runtimeCancelSignal(e *Evaluator) <-chan struct{} {
+	if e == nil || e.currentTask == nil {
+		return nil
+	}
+	return e.currentTask.cancelCh
+}
+
 func runtimeFatalError(e *Evaluator) error {
 	if e != nil && e.runtime != nil {
 		if err := e.runtime.getFatalTaskFailure(); err != nil {
@@ -92,10 +99,7 @@ func builtinSleep(e *Evaluator, args []Value) (Value, error) {
 		return UnitValue, nil
 	}
 	fatalCh := runtimeFatalSignal(e)
-	cancelCh := (<-chan struct{})(nil)
-	if e != nil && e.currentTask != nil {
-		cancelCh = e.currentTask.cancelCh
-	}
+	cancelCh := runtimeCancelSignal(e)
 	if cancelCh == nil && fatalCh == nil {
 		time.Sleep(d)
 		return UnitValue, nil

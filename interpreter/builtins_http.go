@@ -49,10 +49,7 @@ func builtinHTTP(e *Evaluator, args []Value) (Value, error) {
 	defer close(reqDone)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	cancelCh := (<-chan struct{})(nil)
-	if e != nil && e.currentTask != nil {
-		cancelCh = e.currentTask.cancelCh
-	}
+	cancelCh := runtimeCancelSignal(e)
 	fatalCh := runtimeFatalSignal(e)
 	go func() {
 		select {
