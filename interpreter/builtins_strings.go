@@ -14,17 +14,6 @@ func registerStringBuiltins() {
 	builtins["replace"] = &Builtin{Name: "replace", Fn: builtinReplace}
 }
 
-func stringArg(val Value) (string, bool) {
-	switch v := val.(type) {
-	case *String:
-		return v.Value, true
-	case *Char:
-		return v.Value, true
-	default:
-		return "", false
-	}
-}
-
 func builtinSplit(_ *Evaluator, args []Value) (Value, error) {
 	if len(args) != 2 {
 		return nil, &RuntimeError{Message: "split expects string and separator"}
