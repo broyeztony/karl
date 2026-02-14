@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"karl/interpreter"
 	"karl/lexer"
@@ -19,11 +20,20 @@ const (
 	PROMPT_CONT = "...   "
 )
 
+type scannerResult struct {
+	line string
+	err  error
+	ok   bool
+}
+
 // Start begins the REPL session
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
 	env := interpreter.NewBaseEnvironment()
 	eval := interpreter.NewEvaluatorWithSourceAndFilename("", "<repl>")
+
+	scanCh := make(chan scannerResult)
+	go scanInput(scanner, scanCh)
 
 	fmt.Fprintf(out, "╔═══════════════════════════════════════╗\n")
 	fmt.Fprintf(out, "║   Karl REPL - Interactive Shell      ║\n")
@@ -44,12 +54,10 @@ func Start(in io.Reader, out io.Writer) {
 			fmt.Fprint(out, PROMPT)
 		}
 
-		// Read input
-		if !scanner.Scan() {
+		line, ok := waitForInput(scanCh, eval, out)
+		if !ok {
 			return
 		}
-
-		line := scanner.Text()
 
 		// Handle REPL commands
 		if !multiline && strings.HasPrefix(line, ":") {
@@ -90,12 +98,16 @@ func Start(in io.Reader, out io.Writer) {
 		multiline = false
 		inputBuffer.Reset()
 
-		// Update evaluator source for better error messages
-		eval = interpreter.NewEvaluatorWithSourceAndFilename(input, "<repl>")
+		// Keep one evaluator/runtime for the whole REPL session; only refresh
+		// source metadata for diagnostics on each submitted input.
+		eval.SetSourceAndFilename(input, "<repl>")
 
 		val, sig, err := eval.Eval(program, env)
 		if err != nil {
 			fmt.Fprintf(out, "Error: %s\n", interpreter.FormatRuntimeError(err, input, "<repl>"))
+			if isFatalREPLError(err) {
+				return
+			}
 			continue
 		}
 
@@ -107,6 +119,9 @@ func Start(in io.Reader, out io.Writer) {
 		// Check for unhandled task failures
 		if err := eval.CheckUnhandledTaskFailures(); err != nil {
 			fmt.Fprintf(out, "Error: %s\n", err)
+			if isFatalREPLError(err) {
+				return
+			}
 			continue
 		}
 
@@ -215,6 +230,52 @@ func hasUnclosedDelimiters(input string) bool {
 			bracketDepth--
 		case token.EOF:
 			return parenDepth > 0 || braceDepth > 0 || bracketDepth > 0
+		}
+	}
+}
+
+func isFatalREPLError(err error) bool {
+	if err == nil {
+		return false
+	}
+	_, fatal := err.(*interpreter.UnhandledTaskError)
+	return fatal
+}
+
+func scanInput(scanner *bufio.Scanner, out chan<- scannerResult) {
+	defer close(out)
+	for scanner.Scan() {
+		out <- scannerResult{line: scanner.Text(), ok: true}
+	}
+	if err := scanner.Err(); err != nil {
+		out <- scannerResult{err: err}
+	}
+}
+
+func waitForInput(scanCh <-chan scannerResult, eval *interpreter.Evaluator, out io.Writer) (string, bool) {
+	ticker := time.NewTicker(25 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case in, ok := <-scanCh:
+			if !ok {
+				return "", false
+			}
+			if in.err != nil {
+				fmt.Fprintf(out, "Input error: %v\n", in.err)
+				return "", false
+			}
+			return in.line, in.ok
+		case <-ticker.C:
+			err := eval.CheckUnhandledTaskFailures()
+			if err == nil {
+				continue
+			}
+			fmt.Fprintf(out, "Error: %s\n", err)
+			if isFatalREPLError(err) {
+				return "", false
+			}
 		}
 	}
 }
