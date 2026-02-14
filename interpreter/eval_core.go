@@ -6,32 +6,14 @@ import (
 )
 
 func (e *Evaluator) Eval(node ast.Node, env *Environment) (Value, *Signal, error) {
-	if e.runtime != nil {
-		if err := e.runtime.getFatalTaskFailure(); err != nil {
-			return nil, nil, err
-		}
-	}
-	if e.currentTask != nil && e.currentTask.canceled() {
-		return nil, nil, canceledError()
+	if err := e.checkRuntimeBeforeEval(); err != nil {
+		return nil, nil, err
 	}
 
 	val, sig, err := e.evalNode(node, env)
-	if err != nil {
-		if re, ok := err.(*RuntimeError); ok && re.Token == nil {
-			if tok := tokenFromNode(node); tok != nil {
-				re.Token = tok
-			}
-		}
-		if re, ok := err.(*RecoverableError); ok && re.Token == nil {
-			if tok := tokenFromNode(node); tok != nil {
-				re.Token = tok
-			}
-		}
-	}
-	if err == nil && sig == nil && e.runtime != nil {
-		if fatalErr := e.runtime.getFatalTaskFailure(); fatalErr != nil {
-			return nil, nil, fatalErr
-		}
+	annotateErrorToken(node, err)
+	if fatalErr := e.checkRuntimeAfterEval(sig, err); fatalErr != nil {
+		return nil, nil, fatalErr
 	}
 	return val, sig, err
 }
