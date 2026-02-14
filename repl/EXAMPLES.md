@@ -1,6 +1,8 @@
 # Karl REPL Examples
 
-Try these examples in the Karl REPL (`./karl repl`):
+Try these examples in the Karl REPL (`./karl repl`).
+
+**Note**: Enter each line separately in the REPL and press Enter after each line. The examples show the complete sequence - enter them in order from top to bottom.
 
 ## 1. Basic Arithmetic and Variables
 
@@ -13,6 +15,8 @@ x * y
 
 ## 2. First-Class Functions
 
+Enter these lines in order (each line builds on the previous):
+
 ```karl
 let double = x -> x * 2
 let inc = x -> x + 1
@@ -20,6 +24,8 @@ let compose = (f, g) -> x -> f(g(x))
 let doubleAndInc = compose(inc, double)
 doubleAndInc(20)  // Result: 41
 ```
+
+The `compose` function takes two functions and returns a new function that applies them in sequence.
 
 ## 3. Closures
 
