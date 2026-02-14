@@ -54,15 +54,11 @@ func builtinFilter(e *Evaluator, args []Value) (Value, error) {
 	fn := args[1]
 	out := []Value{}
 	for _, el := range arr.Elements {
-		val, _, err := e.applyFunction(fn, []Value{el})
+		matches, err := applyListPredicate(e, fn, el, "filter")
 		if err != nil {
 			return nil, err
 		}
-		b, ok := val.(*Boolean)
-		if !ok {
-			return nil, &RuntimeError{Message: "filter predicate must return bool"}
-		}
-		if b.Value {
+		if matches {
 			out = append(out, el)
 		}
 	}
@@ -126,15 +122,11 @@ func builtinFind(e *Evaluator, args []Value) (Value, error) {
 	}
 	fn := args[1]
 	for _, el := range arr.Elements {
-		val, _, err := e.applyFunction(fn, []Value{el})
+		matches, err := applyListPredicate(e, fn, el, "find")
 		if err != nil {
 			return nil, err
 		}
-		b, ok := val.(*Boolean)
-		if !ok {
-			return nil, &RuntimeError{Message: "find predicate must return bool"}
-		}
-		if b.Value {
+		if matches {
 			return el, nil
 		}
 	}
