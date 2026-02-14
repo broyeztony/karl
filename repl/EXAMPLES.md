@@ -29,18 +29,19 @@ The `compose` function takes two functions and returns a new function that appli
 
 ## 3. Closures
 
+Closures capture variables from their enclosing scope:
+
 ```karl
-let makeCounter = () -> {
-  let count = 0
-  () -> {
-    count = count + 1
-    count
-  }
-}
-let counter = makeCounter()
-counter()  // 1
-counter()  // 2
-counter()  // 3
+let makeAdder = n -> x -> n + x
+let add10 = makeAdder(10)
+add10(5)   // 15
+add10(32)  // 42
+
+let makeMultiplier = factor -> num -> num * factor
+let double = makeMultiplier(2)
+let triple = makeMultiplier(3)
+double(21)  // 42
+triple(14)  // 42
 ```
 
 ## 4. Higher-Order Functions
