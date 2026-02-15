@@ -7,13 +7,13 @@ An interactive Read-Eval-Print Loop for the Karl programming language.
 Start the REPL:
 
 ```bash
-./karl repl
+./karl loom
 ```
 
 Or if you have `karl` in your PATH:
 
 ```bash
-karl repl
+karl loom
 ```
 
 ## Features

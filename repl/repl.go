@@ -59,6 +59,12 @@ func Start(in io.Reader, out io.Writer) {
 			return
 		}
 
+		// Support Ctrl+L (form feed) as a clear-screen shortcut.
+		if isCtrlL(line) {
+			fmt.Fprint(out, "\033[H\033[2J")
+			continue
+		}
+
 		// Handle REPL commands
 		if !multiline && strings.HasPrefix(line, ":") {
 			if handleCommand(line, out, env) {
@@ -146,7 +152,7 @@ func handleCommand(cmd string, out io.Writer, env *interpreter.Environment) bool
 		fmt.Fprintln(out, "  :quit, :q     - Exit the REPL")
 		fmt.Fprintln(out, "  :env          - Show current environment bindings")
 		fmt.Fprintln(out, "  :examples     - Show example code snippets")
-		fmt.Fprintln(out, "  :clear        - Clear the screen")
+		fmt.Fprintln(out, "  :clear        - Clear the screen (same as Ctrl+L)")
 		fmt.Fprintln(out, "\nTips:")
 		fmt.Fprintln(out, "  - Press Enter on an incomplete line to continue on the next line")
 		fmt.Fprintln(out, "  - Variables persist across evaluations")
@@ -240,6 +246,10 @@ func isFatalREPLError(err error) bool {
 	}
 	_, fatal := err.(*interpreter.UnhandledTaskError)
 	return fatal
+}
+
+func isCtrlL(line string) bool {
+	return strings.TrimRight(line, "\r") == "\f"
 }
 
 func scanInput(scanner *bufio.Scanner, out chan<- scannerResult) {
