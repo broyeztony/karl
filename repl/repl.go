@@ -21,6 +21,36 @@ const (
 	PROMPT_CONT = "...   "
 )
 
+const replIntroArt = `                                                                                                    
+
+                                                                                                    
+                                                 .==-:.                                             
+                                                .==..=:                                             
+                                                :+:  -=.                                            
+                                               .==.  -*-                                            
+                                               .==  .+%*:                                           
+                                               .==.  :+:                                            
+                                               .=+.  -+:                                            
+                                                -+: .*+.                                            
+                                                :+- :*-                                             
+                                                :+=.=*:                                             
+                                                 -*=*=.                                             
+                                                 :*%*:                                              
+                                                  =%=                                               
+                                                 =#%*:                                              
+                                               .-#==**:                                             
+                                              .=*=.:+%*:                                            
+                                            .:**:   .+%*:                                           
+                                           :##=.     :*%*:                                          
+                                        .:*#+:.        -#=.                                         
+                                     .:*%#=             :*#:                                        
+          .:...  . .-+:-:::::::==+*#%%*-                  :%*:                                      
+                   .*%#***#***++=-:. .                      :%%%*:.         .::-::.::-==:.          
+                                                              .:*%%%%%%%%%%%%#**==:....             
+                                                                  .........                         
+                                                                                                    
+                                                                                                    `
+
 type scannerResult struct {
 	line string
 	err  error
@@ -63,9 +93,7 @@ func start(in io.Reader, out io.Writer, opts startOptions) {
 	}
 
 	if opts.showIntro {
-		fmt.Fprintf(sessionOut, "╔═══════════════════════════════════════╗\n")
-		fmt.Fprintf(sessionOut, "║   Karl REPL - Interactive Shell       ║\n")
-		fmt.Fprintf(sessionOut, "╚═══════════════════════════════════════╝\n")
+		fmt.Fprintf(sessionOut, "%s\n", replIntroArt)
 		fmt.Fprintf(sessionOut, "\n")
 		fmt.Fprintf(sessionOut, "Type expressions and press Enter to evaluate.\n")
 		fmt.Fprintf(sessionOut, "Commands: :help, :quit, :clear, :env\n")
