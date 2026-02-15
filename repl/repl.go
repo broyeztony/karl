@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	PROMPT      = "karl> "
+	PROMPT      = "❯ "
 	PROMPT_CONT = "...   "
 )
 
