@@ -8,26 +8,26 @@ Connect to a Karl REPL running on a remote server over TCP.
 
 ```bash
 # Start server on default port (localhost:9000)
-./karl repl-server
+./karl loom serve
 
 # Start server on custom address
-./karl repl-server --addr=0.0.0.0:9000
+./karl loom serve --addr=0.0.0.0:9000
 
 # Start server on specific port
-./karl repl-server --addr=:8080
+./karl loom serve --addr=:8080
 ```
 
 ### Connect with Client
 
 ```bash
 # Connect to local server
-./karl repl-client localhost:9000
+./karl loom connect localhost:9000
 
 # Connect to remote server
-./karl repl-client 192.168.1.100:9000
+./karl loom connect 192.168.1.100:9000
 
 # With rlwrap for history support
-rlwrap ./karl repl-client localhost:9000
+rlwrap ./karl loom connect localhost:9000
 ```
 
 ## Alternative Connection Methods
@@ -77,10 +77,10 @@ Run Karl REPL in a container and connect from outside.
 ssh -L 9000:localhost:9000 user@remote-server
 
 # On remote server, start Karl REPL server
-./karl repl-server
+./karl loom serve
 
 # On local machine, connect through tunnel
-./karl repl-client localhost:9000
+./karl loom connect localhost:9000
 ```
 
 ## Examples
@@ -89,15 +89,15 @@ ssh -L 9000:localhost:9000 user@remote-server
 
 Terminal 1:
 ```bash
-$ ./karl repl-server
+$ ./karl loom serve
 Karl REPL Server listening on localhost:9000
-Connect with: ./karl repl-client localhost:9000
+Connect with: ./karl loom connect localhost:9000
 Or use: rlwrap nc localhost 9000
 ```
 
 Terminal 2:
 ```bash
-$ ./karl repl-client localhost:9000
+$ ./karl loom connect localhost:9000
 Connected to Karl REPL Server at localhost:9000
 Press Ctrl+C to disconnect
 
@@ -120,10 +120,10 @@ Goodbye!
 
 ```bash
 # Team lead starts server
-$ ./karl repl-server --addr=0.0.0.0:9000
+$ ./karl loom serve --addr=0.0.0.0:9000
 
 # Team members connect
-$ ./karl repl-client team-server.local:9000
+$ ./karl loom connect team-server.local:9000
 ```
 
 ## Command Reference
@@ -131,22 +131,22 @@ $ ./karl repl-client team-server.local:9000
 ### Server
 
 ```bash
-karl repl-server [OPTIONS]
+karl loom serve [OPTIONS]
 
 Options:
   --addr string   Address to listen on (default "localhost:9000")
   -h, --help      Show help message
 
 Examples:
-  karl repl-server
-  karl repl-server --addr=0.0.0.0:9000
-  karl repl-server --addr=:8080
+  karl loom serve
+  karl loom serve --addr=0.0.0.0:9000
+  karl loom serve --addr=:8080
 ```
 
 ### Client
 
 ```bash
-karl repl-client <host:port>
+karl loom connect <host:port>
 
 Arguments:
   host:port   Server address to connect to
@@ -155,8 +155,8 @@ Options:
   -h, --help  Show help message
 
 Examples:
-  karl repl-client localhost:9000
-  karl repl-client 192.168.1.100:9000
+  karl loom connect localhost:9000
+  karl loom connect 192.168.1.100:9000
 ```
 
 ## Troubleshooting

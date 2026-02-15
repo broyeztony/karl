@@ -1,6 +1,6 @@
 # Karl REPL Examples
 
-Try these examples in the Karl REPL (`./karl repl`).
+Try these examples in the Karl REPL (`./karl loom`).
 
 **Note**: Enter each line separately in the REPL and press Enter after each line. The examples show the complete sequence - enter them in order from top to bottom.
 

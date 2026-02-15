@@ -10,12 +10,12 @@ if ! command -v rlwrap &> /dev/null; then
     echo "  Ubuntu:  sudo apt-get install rlwrap"
     echo "  Fedora:  sudo dnf install rlwrap"
     echo ""
-    echo "Starting Karl REPL without rlwrap..."
-    exec ./karl repl
+    echo "Starting Karl Loom REPL without rlwrap..."
+    exec ./karl loom
 fi
 
 # Start Karl REPL with rlwrap
 # -c: Enable filename completion
 # -H: Use history file
 # -r: Put all words on completion list
-exec rlwrap -c -H ~/.karl_history -r ./karl repl
+exec rlwrap -c -H ~/.karl_history -r ./karl loom

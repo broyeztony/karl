@@ -15,9 +15,9 @@ SERVER="$1"
 # Check if rlwrap is installed
 if command -v rlwrap &> /dev/null; then
     echo "Connecting to $SERVER with rlwrap..."
-    exec rlwrap -c -H ~/.karl_remote_history -r ./karl repl-client "$SERVER"
+    exec rlwrap -c -H ~/.karl_remote_history -r ./karl loom connect "$SERVER"
 else
     echo "Connecting to $SERVER..."
     echo "(Install rlwrap for command history: brew install rlwrap)"
-    exec ./karl repl-client "$SERVER"
+    exec ./karl loom connect "$SERVER"
 fi

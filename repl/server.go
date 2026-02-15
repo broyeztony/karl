@@ -17,7 +17,7 @@ func Server(addr string) error {
 	defer listener.Close()
 
 	fmt.Printf("Karl REPL Server listening on %s\n", addr)
-	fmt.Printf("Connect with: ./karl repl-client %s\n", addr)
+	fmt.Printf("Connect with: ./karl loom connect %s\n", addr)
 	fmt.Printf("Or use: rlwrap nc %s\n", addr)
 
 	for {
