@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/term"
@@ -17,10 +18,12 @@ type ttyByteEvent struct {
 }
 
 type ttyInput struct {
-	in     *os.File
-	out    io.Writer
-	state  *term.State
-	events chan ttyByteEvent
+	in         *os.File
+	out        io.Writer
+	state      *term.State
+	events     chan ttyByteEvent
+	history    []string
+	maxHistory int
 }
 
 func newTTYInput(in io.Reader, out io.Writer) (*ttyInput, bool) {
@@ -42,10 +45,12 @@ func newTTYInput(in io.Reader, out io.Writer) (*ttyInput, bool) {
 	}
 
 	ti := &ttyInput{
-		in:     inFile,
-		out:    out,
-		state:  state,
-		events: make(chan ttyByteEvent, 128),
+		in:         inFile,
+		out:        out,
+		state:      state,
+		events:     make(chan ttyByteEvent, 128),
+		history:    make([]string, 0, 256),
+		maxHistory: 1000,
 	}
 	go ti.readBytes()
 	return ti, true
@@ -79,6 +84,9 @@ func (t *ttyInput) readLine(prompt string, eval *interpreter.Evaluator) (string,
 	}
 	line := make([]byte, 0, 64)
 	cursor := 0
+	historyIndex := len(t.history)
+	inHistoryNav := false
+	draftLine := make([]byte, 0, 64)
 	fmt.Fprint(t.out, prompt)
 
 	ticker := time.NewTicker(25 * time.Millisecond)
@@ -97,7 +105,9 @@ func (t *ttyInput) readLine(prompt string, eval *interpreter.Evaluator) (string,
 			switch ev.b {
 			case '\r', '\n':
 				fmt.Fprint(t.out, "\r\n")
-				return string(line), true
+				entered := string(line)
+				t.appendHistory(entered)
+				return entered, true
 			case 0x03: // Ctrl+C
 				fmt.Fprint(t.out, "^C\r\n")
 				return "", false
@@ -111,6 +121,10 @@ func (t *ttyInput) readLine(prompt string, eval *interpreter.Evaluator) (string,
 				redrawLine(t.out, prompt, line, cursor)
 			case 0x7f, 0x08: // Backspace
 				if cursor > 0 {
+					if inHistoryNav {
+						inHistoryNav = false
+						historyIndex = len(t.history)
+					}
 					line = append(line[:cursor-1], line[cursor:]...)
 					cursor--
 					redrawLine(t.out, prompt, line, cursor)
@@ -128,6 +142,34 @@ func (t *ttyInput) readLine(prompt string, eval *interpreter.Evaluator) (string,
 					continue
 				}
 				switch code {
+				case 'A': // Up arrow
+					if len(t.history) == 0 {
+						continue
+					}
+					if !inHistoryNav {
+						draftLine = append(draftLine[:0], line...)
+						inHistoryNav = true
+						historyIndex = len(t.history) - 1
+					} else if historyIndex > 0 {
+						historyIndex--
+					}
+					line = []byte(t.history[historyIndex])
+					cursor = len(line)
+					redrawLine(t.out, prompt, line, cursor)
+				case 'B': // Down arrow
+					if !inHistoryNav {
+						continue
+					}
+					if historyIndex < len(t.history)-1 {
+						historyIndex++
+						line = []byte(t.history[historyIndex])
+					} else {
+						inHistoryNav = false
+						historyIndex = len(t.history)
+						line = append([]byte(nil), draftLine...)
+					}
+					cursor = len(line)
+					redrawLine(t.out, prompt, line, cursor)
 				case 'D': // Left arrow
 					if cursor > 0 {
 						cursor--
@@ -147,6 +189,10 @@ func (t *ttyInput) readLine(prompt string, eval *interpreter.Evaluator) (string,
 				case '3': // Delete sequence ESC [ 3 ~
 					termByte, ok := t.readByteWithTimeout(10 * time.Millisecond)
 					if ok && termByte == '~' && cursor < len(line) {
+						if inHistoryNav {
+							inHistoryNav = false
+							historyIndex = len(t.history)
+						}
 						line = append(line[:cursor], line[cursor+1:]...)
 						redrawLine(t.out, prompt, line, cursor)
 					}
@@ -154,6 +200,10 @@ func (t *ttyInput) readLine(prompt string, eval *interpreter.Evaluator) (string,
 			default:
 				// Printable ASCII and tab; insert at cursor position.
 				if ev.b >= 0x20 || ev.b == '\t' {
+					if inHistoryNav {
+						inHistoryNav = false
+						historyIndex = len(t.history)
+					}
 					line = append(line, 0)
 					copy(line[cursor+1:], line[cursor:])
 					line[cursor] = ev.b
@@ -174,6 +224,19 @@ func (t *ttyInput) readLine(prompt string, eval *interpreter.Evaluator) (string,
 			}
 			redrawLine(t.out, prompt, line, cursor)
 		}
+	}
+}
+
+func (t *ttyInput) appendHistory(line string) {
+	if strings.TrimSpace(line) == "" {
+		return
+	}
+	if n := len(t.history); n > 0 && t.history[n-1] == line {
+		return
+	}
+	t.history = append(t.history, line)
+	if t.maxHistory > 0 && len(t.history) > t.maxHistory {
+		t.history = t.history[len(t.history)-t.maxHistory:]
 	}
 }
 
