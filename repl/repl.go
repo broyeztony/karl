@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,8 +27,16 @@ type scannerResult struct {
 	ok   bool
 }
 
+type startOptions struct {
+	showIntro bool
+}
+
 // Start begins the REPL session
 func Start(in io.Reader, out io.Writer) {
+	start(in, out, startOptions{showIntro: true})
+}
+
+func start(in io.Reader, out io.Writer, opts startOptions) {
 	env := interpreter.NewBaseEnvironment()
 	eval := interpreter.NewEvaluatorWithSourceAndFilename("", "<repl>")
 
@@ -37,6 +46,9 @@ func Start(in io.Reader, out io.Writer) {
 	)
 	if ti, ok := newTTYInput(in, out); ok {
 		tty = ti
+		defer tty.Close()
+	} else if _, ok := in.(net.Conn); ok {
+		tty = newStreamInput(in, out)
 		defer tty.Close()
 	} else {
 		scanner := bufio.NewScanner(in)
@@ -50,13 +62,15 @@ func Start(in io.Reader, out io.Writer) {
 		sessionOut = newTTYLineWriter(out)
 	}
 
-	fmt.Fprintf(sessionOut, "╔═══════════════════════════════════════╗\n")
-	fmt.Fprintf(sessionOut, "║   Karl REPL - Interactive Shell       ║\n")
-	fmt.Fprintf(sessionOut, "╚═══════════════════════════════════════╝\n")
-	fmt.Fprintf(sessionOut, "\n")
-	fmt.Fprintf(sessionOut, "Type expressions and press Enter to evaluate.\n")
-	fmt.Fprintf(sessionOut, "Commands: :help, :quit, :clear, :env\n")
-	fmt.Fprintf(sessionOut, "See repl/EXAMPLES.md for ideas!\n\n")
+	if opts.showIntro {
+		fmt.Fprintf(sessionOut, "╔═══════════════════════════════════════╗\n")
+		fmt.Fprintf(sessionOut, "║   Karl REPL - Interactive Shell       ║\n")
+		fmt.Fprintf(sessionOut, "╚═══════════════════════════════════════╝\n")
+		fmt.Fprintf(sessionOut, "\n")
+		fmt.Fprintf(sessionOut, "Type expressions and press Enter to evaluate.\n")
+		fmt.Fprintf(sessionOut, "Commands: :help, :quit, :clear, :env\n")
+		fmt.Fprintf(sessionOut, "See repl/EXAMPLES.md for ideas!\n\n")
+	}
 
 	var inputBuffer strings.Builder
 	multiline := false
