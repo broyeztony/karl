@@ -14,6 +14,11 @@ func (e *Evaluator) handleAsyncError(task *Task, err error) {
 		return
 	}
 	task.complete(nil, err)
+	if re, ok := err.(*RecoverableError); ok && re.Kind == "canceled" {
+		// Cancellation is expected for user-initiated cancel and race loser cleanup.
+		// Record it on the task so `wait` can recover it, but don't fail-fast the program.
+		return
+	}
 	if e.runtime == nil {
 		return
 	}

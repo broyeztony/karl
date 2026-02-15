@@ -71,6 +71,47 @@ sleep(20)
 	}
 }
 
+func TestEvalFailFastCanceledDetachedTaskNotReportedUnhandled(t *testing.T) {
+	input := `
+let slow = () -> { sleep(1000); 1 }
+let t = & slow()
+t.cancel()
+sleep(20)
+"ok"
+`
+	val, eval, err := evalWithPolicy(t, input, interpreter.TaskFailurePolicyFailFast)
+	if err != nil {
+		t.Fatalf("unexpected eval error: %v", err)
+	}
+	assertString(t, val, "ok")
+
+	if err := eval.CheckUnhandledTaskFailures(); err != nil {
+		t.Fatalf("did not expect unhandled failures for canceled task, got: %v", err)
+	}
+}
+
+func TestEvalFailFastCanceledBlockedRecvTaskCanBeRecoveredOnWait(t *testing.T) {
+	input := `
+let ch = channel()
+let recvTask = & (() -> {
+    ch.recv()
+})()
+sleep(20)
+recvTask.cancel()
+let out = (wait recvTask) ? { error.kind }
+out
+`
+	val, eval, err := evalWithPolicy(t, input, interpreter.TaskFailurePolicyFailFast)
+	if err != nil {
+		t.Fatalf("unexpected eval error: %v", err)
+	}
+	assertString(t, val, "canceled")
+
+	if err := eval.CheckUnhandledTaskFailures(); err != nil {
+		t.Fatalf("did not expect unhandled failures for canceled task, got: %v", err)
+	}
+}
+
 func TestEvalDeferModeDoesNotInterruptMainFlow(t *testing.T) {
 	input := `
 let boom = () -> { sleep(20); let obj = {}; obj.missing }
