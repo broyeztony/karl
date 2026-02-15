@@ -18,9 +18,9 @@ type ttyByteEvent struct {
 }
 
 type ttyInput struct {
-	in         *os.File
+	in         io.Reader
 	out        io.Writer
-	state      *term.State
+	restore    func() error
 	events     chan ttyByteEvent
 	history    []string
 	maxHistory int
@@ -47,7 +47,7 @@ func newTTYInput(in io.Reader, out io.Writer) (*ttyInput, bool) {
 	ti := &ttyInput{
 		in:         inFile,
 		out:        out,
-		state:      state,
+		restore:    func() error { return term.Restore(int(inFile.Fd()), state) },
 		events:     make(chan ttyByteEvent, 128),
 		history:    make([]string, 0, 256),
 		maxHistory: 1000,
@@ -56,11 +56,23 @@ func newTTYInput(in io.Reader, out io.Writer) (*ttyInput, bool) {
 	return ti, true
 }
 
+func newStreamInput(in io.Reader, out io.Writer) *ttyInput {
+	ti := &ttyInput{
+		in:         in,
+		out:        out,
+		events:     make(chan ttyByteEvent, 128),
+		history:    make([]string, 0, 256),
+		maxHistory: 1000,
+	}
+	go ti.readBytes()
+	return ti
+}
+
 func (t *ttyInput) Close() {
-	if t == nil || t.state == nil {
+	if t == nil || t.restore == nil {
 		return
 	}
-	_ = term.Restore(int(t.in.Fd()), t.state)
+	_ = t.restore()
 }
 
 func (t *ttyInput) readBytes() {
