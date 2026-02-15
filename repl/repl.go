@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,42 +27,81 @@ type scannerResult struct {
 	ok   bool
 }
 
+type startOptions struct {
+	showIntro bool
+}
+
 // Start begins the REPL session
 func Start(in io.Reader, out io.Writer) {
-	scanner := bufio.NewScanner(in)
+	start(in, out, startOptions{showIntro: true})
+}
+
+func start(in io.Reader, out io.Writer, opts startOptions) {
 	env := interpreter.NewBaseEnvironment()
 	eval := interpreter.NewEvaluatorWithSourceAndFilename("", "<repl>")
 
-	scanCh := make(chan scannerResult)
-	go scanInput(scanner, scanCh)
+	var (
+		scanCh chan scannerResult
+		tty    *ttyInput
+	)
+	if ti, ok := newTTYInput(in, out); ok {
+		tty = ti
+		defer tty.Close()
+	} else if _, ok := in.(net.Conn); ok {
+		tty = newStreamInput(in, out)
+		defer tty.Close()
+	} else {
+		scanner := bufio.NewScanner(in)
+		scanCh = make(chan scannerResult)
+		go scanInput(scanner, scanCh)
+	}
 
-	fmt.Fprintf(out, "╔═══════════════════════════════════════╗\n")
-	fmt.Fprintf(out, "║   Karl REPL - Interactive Shell      ║\n")
-	fmt.Fprintf(out, "╚═══════════════════════════════════════╝\n")
-	fmt.Fprintf(out, "\n")
-	fmt.Fprintf(out, "Type expressions and press Enter to evaluate.\n")
-	fmt.Fprintf(out, "Commands: :help, :quit, :env\n")
-	fmt.Fprintf(out, "See repl/EXAMPLES.md for ideas!\n\n")
+	sessionOut := out
+	if tty != nil {
+		// In raw TTY mode, normalize LF to CRLF so lines start in column 0.
+		sessionOut = newTTYLineWriter(out)
+	}
+
+	if opts.showIntro {
+		fmt.Fprintf(sessionOut, "╔═══════════════════════════════════════╗\n")
+		fmt.Fprintf(sessionOut, "║   Karl REPL - Interactive Shell       ║\n")
+		fmt.Fprintf(sessionOut, "╚═══════════════════════════════════════╝\n")
+		fmt.Fprintf(sessionOut, "\n")
+		fmt.Fprintf(sessionOut, "Type expressions and press Enter to evaluate.\n")
+		fmt.Fprintf(sessionOut, "Commands: :help, :quit, :clear, :env\n")
+		fmt.Fprintf(sessionOut, "See repl/EXAMPLES.md for ideas!\n\n")
+	}
 
 	var inputBuffer strings.Builder
 	multiline := false
 
 	for {
 		// Show appropriate prompt
+		prompt := PROMPT
 		if multiline {
-			fmt.Fprint(out, PROMPT_CONT)
-		} else {
-			fmt.Fprint(out, PROMPT)
+			prompt = PROMPT_CONT
 		}
 
-		line, ok := waitForInput(scanCh, eval, out)
-		if !ok {
-			return
+		var (
+			line string
+			ok   bool
+		)
+		if tty != nil {
+			line, ok = tty.readLine(prompt, eval)
+			if !ok {
+				return
+			}
+		} else {
+			fmt.Fprint(out, prompt)
+			line, ok = waitForInput(scanCh, eval, out)
+			if !ok {
+				return
+			}
 		}
 
 		// Handle REPL commands
 		if !multiline && strings.HasPrefix(line, ":") {
-			if handleCommand(line, out, env) {
+			if handleCommand(line, sessionOut, env) {
 				return // :quit was called
 			}
 			continue
@@ -88,7 +128,7 @@ func Start(in io.Reader, out io.Writer) {
 		}
 		if len(errs) > 0 {
 			// Real parse error - show it and reset
-			fmt.Fprintf(out, "Parse error:\n%s\n", parser.FormatParseErrors(errs, input, "<repl>"))
+			fmt.Fprintf(sessionOut, "Parse error:\n%s\n", parser.FormatParseErrors(errs, input, "<repl>"))
 			inputBuffer.Reset()
 			multiline = false
 			continue
@@ -104,7 +144,7 @@ func Start(in io.Reader, out io.Writer) {
 
 		val, sig, err := eval.Eval(program, env)
 		if err != nil {
-			fmt.Fprintf(out, "Error: %s\n", interpreter.FormatRuntimeError(err, input, "<repl>"))
+			fmt.Fprintf(sessionOut, "Error: %s\n", interpreter.FormatRuntimeError(err, input, "<repl>"))
 			if isFatalREPLError(err) {
 				return
 			}
@@ -112,13 +152,13 @@ func Start(in io.Reader, out io.Writer) {
 		}
 
 		if sig != nil {
-			fmt.Fprintf(out, "Error: break/continue outside loop\n")
+			fmt.Fprintf(sessionOut, "Error: break/continue outside loop\n")
 			continue
 		}
 
 		// Check for unhandled task failures
 		if err := eval.CheckUnhandledTaskFailures(); err != nil {
-			fmt.Fprintf(out, "Error: %s\n", err)
+			fmt.Fprintf(sessionOut, "Error: %s\n", err)
 			if isFatalREPLError(err) {
 				return
 			}
@@ -127,7 +167,7 @@ func Start(in io.Reader, out io.Writer) {
 
 		// Print result (unless it's Unit)
 		if _, ok := val.(*interpreter.Unit); !ok {
-			fmt.Fprintf(out, "%s\n", val.Inspect())
+			fmt.Fprintf(sessionOut, "%s\n", val.Inspect())
 		}
 	}
 }
@@ -146,7 +186,7 @@ func handleCommand(cmd string, out io.Writer, env *interpreter.Environment) bool
 		fmt.Fprintln(out, "  :quit, :q     - Exit the REPL")
 		fmt.Fprintln(out, "  :env          - Show current environment bindings")
 		fmt.Fprintln(out, "  :examples     - Show example code snippets")
-		fmt.Fprintln(out, "  :clear        - Clear the screen")
+		fmt.Fprintln(out, "  :clear        - Clear the screen (same as Ctrl+L)")
 		fmt.Fprintln(out, "\nTips:")
 		fmt.Fprintln(out, "  - Press Enter on an incomplete line to continue on the next line")
 		fmt.Fprintln(out, "  - Variables persist across evaluations")
@@ -160,7 +200,7 @@ func handleCommand(cmd string, out io.Writer, env *interpreter.Environment) bool
 		showExamples(out)
 
 	case ":clear":
-		fmt.Fprint(out, "\033[H\033[2J")
+		clearScreen(out)
 
 	default:
 		fmt.Fprintf(out, "Unknown command: %s (try :help)\n", cmd)

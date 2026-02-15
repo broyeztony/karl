@@ -6,6 +6,8 @@ import (
 	"io"
 	"net"
 	"os"
+
+	"golang.org/x/term"
 )
 
 // Server starts a REPL server on the specified address (e.g., "localhost:9000")
@@ -17,7 +19,7 @@ func Server(addr string) error {
 	defer listener.Close()
 
 	fmt.Printf("Karl REPL Server listening on %s\n", addr)
-	fmt.Printf("Connect with: ./karl repl-client %s\n", addr)
+	fmt.Printf("Connect with: ./karl loom connect %s\n", addr)
 	fmt.Printf("Or use: rlwrap nc %s\n", addr)
 
 	for {
@@ -40,15 +42,15 @@ func handleConnection(conn net.Conn) {
 
 	// Send welcome message
 	fmt.Fprintf(conn, "╔═══════════════════════════════════════╗\n")
-	fmt.Fprintf(conn, "║   Karl REPL - Remote Session         ║\n")
+	fmt.Fprintf(conn, "║   Karl REPL - Remote Session          ║\n")
 	fmt.Fprintf(conn, "╚═══════════════════════════════════════╝\n")
 	fmt.Fprintf(conn, "\n")
 	fmt.Fprintf(conn, "Connected to Karl REPL Server\n")
 	fmt.Fprintf(conn, "Type expressions and press Enter to evaluate.\n")
-	fmt.Fprintf(conn, "Commands: :help, :quit, :env, :examples\n\n")
+	fmt.Fprintf(conn, "Commands: :help, :quit, :clear, :env, :examples\n\n")
 
 	// Start REPL session for this connection
-	Start(conn, conn)
+	start(conn, conn, startOptions{showIntro: false})
 
 	fmt.Printf("Connection closed from %s\n", remoteAddr)
 }
@@ -64,12 +66,26 @@ func Client(addr string) error {
 	fmt.Printf("Connected to Karl REPL Server at %s\n", addr)
 	fmt.Printf("Press Ctrl+C to disconnect\n\n")
 
+	restore, rawEnabled := enableClientRawMode(os.Stdin, os.Stdout)
+	if rawEnabled {
+		defer func() {
+			if restoreErr := restore(); restoreErr != nil {
+				fmt.Fprintf(os.Stderr, "warning: failed to restore terminal mode: %v\n", restoreErr)
+			}
+		}()
+	}
+
+	serverOut := io.Writer(os.Stdout)
+	if rawEnabled {
+		serverOut = newTTYLineWriter(os.Stdout)
+	}
+
 	// Start two goroutines: one for reading from server, one for writing to server
 	done := make(chan error, 2)
 
 	// Read from server and write to stdout
 	go func() {
-		_, copyErr := io.Copy(os.Stdout, conn)
+		_, copyErr := io.Copy(serverOut, conn)
 		done <- copyErr
 	}()
 
@@ -85,4 +101,20 @@ func Client(addr string) error {
 	}
 
 	return nil
+}
+
+func enableClientRawMode(stdin *os.File, stdout *os.File) (func() error, bool) {
+	if stdin == nil || stdout == nil {
+		return nil, false
+	}
+	if !term.IsTerminal(int(stdin.Fd())) || !term.IsTerminal(int(stdout.Fd())) {
+		return nil, false
+	}
+	state, err := term.MakeRaw(int(stdin.Fd()))
+	if err != nil {
+		return nil, false
+	}
+	return func() error {
+		return term.Restore(int(stdin.Fd()), state)
+	}, true
 }

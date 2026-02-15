@@ -28,6 +28,8 @@ func main() {
 		os.Exit(parseCommand(os.Args[2:]))
 	case "run":
 		os.Exit(runCommand(os.Args[2:]))
+	case "loom":
+		os.Exit(loomCommand(os.Args[2:]))
 	case "repl":
 		os.Exit(replCommand(os.Args[2:]))
 	case "repl-server":
@@ -45,6 +47,10 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n")
 	fmt.Fprintf(os.Stderr, "  karl parse <file.k> [--format=pretty|json]\n")
 	fmt.Fprintf(os.Stderr, "  karl run <file.k> [--task-failure-policy=fail-fast|defer]\n")
+	fmt.Fprintf(os.Stderr, "  karl loom\n")
+	fmt.Fprintf(os.Stderr, "  karl loom serve [--addr=host:port]\n")
+	fmt.Fprintf(os.Stderr, "  karl loom connect <host:port>\n")
+	fmt.Fprintf(os.Stderr, "\nCompatibility aliases:\n")
 	fmt.Fprintf(os.Stderr, "  karl repl\n")
 	fmt.Fprintf(os.Stderr, "  karl repl-server [--addr=host:port]\n")
 	fmt.Fprintf(os.Stderr, "  karl repl-client <host:port>\n")
@@ -270,6 +276,36 @@ func runProgram(program *ast.Program, source string, filename string, taskFailur
 	return val, nil
 }
 
+func loomCommand(args []string) int {
+	if len(args) == 0 {
+		return replCommand(nil)
+	}
+
+	switch args[0] {
+	case "-h", "--help", "help":
+		loomUsage()
+		return 0
+	case "serve":
+		return replServerCommand(args[1:])
+	case "connect":
+		return replClientCommand(args[1:])
+	default:
+		fmt.Fprintf(os.Stderr, "unknown loom subcommand: %s\n", args[0])
+		loomUsage()
+		return 2
+	}
+}
+
+func loomUsage() {
+	fmt.Fprintf(os.Stderr, "Usage:\n")
+	fmt.Fprintf(os.Stderr, "  karl loom\n")
+	fmt.Fprintf(os.Stderr, "  karl loom serve [--addr=host:port]\n")
+	fmt.Fprintf(os.Stderr, "  karl loom connect <host:port>\n")
+	fmt.Fprintf(os.Stderr, "\nSubcommands:\n")
+	fmt.Fprintf(os.Stderr, "  serve      start a remote Loom REPL server\n")
+	fmt.Fprintf(os.Stderr, "  connect    connect to a remote Loom REPL server\n")
+}
+
 func replCommand(args []string) int {
 	help := false
 	for _, arg := range args {
@@ -298,7 +334,8 @@ func replCommand(args []string) int {
 
 func replUsage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n")
-	fmt.Fprintf(os.Stderr, "  karl repl\n")
+	fmt.Fprintf(os.Stderr, "  karl loom\n")
+	fmt.Fprintf(os.Stderr, "  karl repl (alias)\n")
 	fmt.Fprintf(os.Stderr, "\nStarts an interactive Read-Eval-Print Loop.\n")
 	fmt.Fprintf(os.Stderr, "Type expressions and press Enter to evaluate them.\n")
 	fmt.Fprintf(os.Stderr, "Type :help for REPL commands.\n")
@@ -349,13 +386,14 @@ func replServerCommand(args []string) int {
 
 func replServerUsage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n")
-	fmt.Fprintf(os.Stderr, "  karl repl-server [--addr=host:port]\n")
+	fmt.Fprintf(os.Stderr, "  karl loom serve [--addr=host:port]\n")
+	fmt.Fprintf(os.Stderr, "  karl repl-server [--addr=host:port] (alias)\n")
 	fmt.Fprintf(os.Stderr, "\nStarts a Karl REPL server that clients can connect to.\n")
 	fmt.Fprintf(os.Stderr, "\nOptions:\n")
 	fmt.Fprintf(os.Stderr, "  --addr string   address to listen on (default \"localhost:9000\")\n")
 	fmt.Fprintf(os.Stderr, "\nExamples:\n")
-	fmt.Fprintf(os.Stderr, "  karl repl-server\n")
-	fmt.Fprintf(os.Stderr, "  karl repl-server --addr=0.0.0.0:9000\n")
+	fmt.Fprintf(os.Stderr, "  karl loom serve\n")
+	fmt.Fprintf(os.Stderr, "  karl loom serve --addr=0.0.0.0:9000\n")
 }
 
 func replClientCommand(args []string) int {
@@ -402,10 +440,10 @@ func replClientCommand(args []string) int {
 
 func replClientUsage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n")
-	fmt.Fprintf(os.Stderr, "  karl repl-client <host:port>\n")
+	fmt.Fprintf(os.Stderr, "  karl loom connect <host:port>\n")
+	fmt.Fprintf(os.Stderr, "  karl repl-client <host:port> (alias)\n")
 	fmt.Fprintf(os.Stderr, "\nConnects to a remote Karl REPL server.\n")
 	fmt.Fprintf(os.Stderr, "\nExamples:\n")
-	fmt.Fprintf(os.Stderr, "  karl repl-client localhost:9000\n")
-	fmt.Fprintf(os.Stderr, "  karl repl-client 192.168.1.100:9000\n")
+	fmt.Fprintf(os.Stderr, "  karl loom connect localhost:9000\n")
+	fmt.Fprintf(os.Stderr, "  karl loom connect 192.168.1.100:9000\n")
 }
-
