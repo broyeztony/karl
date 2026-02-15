@@ -2,11 +2,12 @@
 
 All notable changes to Karl are documented here.
 
-## [v0.3.6] - 2026-02-15
+## [v0.4.0] - 2026-02-15
 
 Highlights:
 - Added an interactive REPL with both local and remote modes.
 - Introduced the `karl loom` command family for REPL workflows.
+- Added native string slicing with range syntax (`"text"[start..end]`).
 - Refactored the interpreter into a modular architecture (no intended behavior change).
 
 REPL & CLI:
@@ -14,6 +15,9 @@ REPL & CLI:
 - Added `karl loom serve` and `karl loom connect <host:port>` for remote REPL sessions.
 - Kept compatibility aliases for `repl`, `repl-server`, and `repl-client`.
 - Added REPL docs and examples under `repl/`.
+
+Language:
+- Added string slicing support via existing slice syntax (`s[start..end]`), including open bounds and negative indices.
 
 Interpreter:
 - Split monolithic evaluator/builtins/runtime/value code into focused modules.
