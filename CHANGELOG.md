@@ -2,6 +2,21 @@
 
 All notable changes to Karl are documented here.
 
+## [v0.4.2] - 2026-02-15
+
+Highlights:
+- Improved REPL presentation with a dedicated ASCII intro banner.
+- REPL now shows the current Karl CLI version at startup.
+- Top-level `karl` usage now prints CLI version before command help.
+
+REPL & CLI:
+- Added version display in REPL intro (`karl loom` / `karl repl`).
+- Added version display in default CLI usage output.
+
+Docs:
+- Added tooling naming spec (`SPECS/tooling_naming.md`).
+- Updated TODO priorities.
+
 ## [v0.4.1] - 2026-02-15
 
 Highlights:
