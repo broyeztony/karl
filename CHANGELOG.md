@@ -2,6 +2,18 @@
 
 All notable changes to Karl are documented here.
 
+## [v0.4.3] - 2026-02-15
+
+Highlights:
+- Refined REPL prompt wording for a cleaner interactive experience.
+- Updated roadmap priorities for runbook/notebook work.
+
+REPL & CLI:
+- Updated REPL prompt text.
+
+Docs:
+- Updated `SPECS/todolist.md` with runbook-critical blockers and priority ordering.
+
 ## [v0.4.2] - 2026-02-15
 
 Highlights:
