@@ -6,11 +6,6 @@
 [![CI](https://github.com/broyeztony/Karl/actions/workflows/ci.yml/badge.svg)](https://github.com/broyeztony/Karl/actions/workflows/ci.yml)
 [![Workflow Tests](https://github.com/broyeztony/Karl/actions/workflows/workflow-tests.yml/badge.svg)](https://github.com/broyeztony/Karl/actions/workflows/workflow-tests.yml)
 
-### VS Code
-
-Karl ships with a VS Code extension in `karl-vscode/` for syntax highlighting and editor support.
-See setup and usage details in [karl-vscode/README.md](karl-vscode/README.md).
-
 ![Karl REPL](./assets/repl.png)
 
 Watch the YouTube video: [**Karl: First Impressions (Live Language Demo)**](https://www.youtube.com/watch?v=pes-ZOvM0s0)
@@ -157,6 +152,11 @@ cat <file.k> | karl run -
 ```
 
 **REPL**: Start an interactive session with `karl loom`. See [repl/README.md](repl/README.md) for details.
+
+### VS Code
+
+Karl ships with a VS Code extension in `karl-vscode/` for syntax highlighting and editor support.
+See setup and usage details in [karl-vscode/README.md](karl-vscode/README.md).
 
 ### Tests
 
