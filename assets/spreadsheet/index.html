@@ -195,14 +195,25 @@
     </div>
 
     <script>
-        const ROWS = 50;
-        const COLS = 26; // A-Z
+        const ROWS = 100;
+        const COLS = 50; // A-AX
         const grid = document.getElementById('grid');
         const formulaBar = document.getElementById('formula-bar');
         const selectedCellIndicator = document.getElementById('selected-cell-indicator');
         const statusDiv = document.getElementById('status');
         let selectedCellId = null;
         let ws;
+
+        function getColName(n) {
+            let name = "";
+            n++; // Convert to 1-based index
+            while (n > 0) {
+                n--;
+                name = String.fromCharCode(65 + (n % 26)) + name;
+                n = Math.floor(n / 26);
+            }
+            return name;
+        }
 
         function sendCmd(cmd, data = {}) {
             if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -261,11 +272,11 @@
             });
             grid.appendChild(corner);
 
-            // Column Headers (A-Z)
+            // Column Headers (A-..., AA-...)
             for (let i = 0; i < COLS; i++) {
                 const colHeader = document.createElement('div');
                 colHeader.className = 'header-cell';
-                colHeader.textContent = String.fromCharCode(65 + i); // Display Name
+                colHeader.textContent = getColName(i); // Display Name
 
                 // Resizer
                 const resizer = document.createElement('div');
@@ -293,7 +304,7 @@
 
                 // Cells
                 for (let c = 0; c < COLS; c++) {
-                    const cellId = String.fromCharCode(65 + c) + r;
+                    const cellId = getColName(c) + r;
                     const cellDiv = document.createElement('div');
                     cellDiv.className = 'cell';
                     // Tag column for potentially hiding via CSS class if we wanted, 
