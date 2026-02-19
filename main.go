@@ -14,6 +14,7 @@ import (
 	"karl/lexer"
 	"karl/notebook"
 	"karl/parser"
+	"karl/playground"
 	"karl/repl"
 	"karl/spreadsheet"
 )
@@ -48,6 +49,8 @@ func main() {
 		os.Exit(kernelCommand(os.Args[2:]))
 	case "spreadsheet":
 		os.Exit(spreadsheetCommand(os.Args[2:]))
+	case "playground":
+		os.Exit(playgroundCommand(os.Args[2:]))
 	default:
 		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", sub)
 		usage()
@@ -69,6 +72,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  notebook convert <in.ipynb> <out.knb> convert Jupyter notebook to Karl notebook\n")
 	fmt.Fprintf(os.Stderr, "  kernel <connection_file> start Jupyter kernel\n")
 	fmt.Fprintf(os.Stderr, "  spreadsheet [addr]       start reactive spreadsheet server (default :8080)\n")
+	fmt.Fprintf(os.Stderr, "  playground [addr]        start WASM playground server (default :8081)\n")
 	fmt.Fprintf(os.Stderr, "  help                     show this help message\n")
 }
 
@@ -682,6 +686,28 @@ func spreadsheetCommand(args []string) int {
 	srv := spreadsheet.NewServer()
 	if err := srv.Start(addr); err != nil {
 		fmt.Fprintf(os.Stderr, "Spreadsheet server error: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
+func playgroundCommand(args []string) int {
+	addr := ":8081" // Default to :8081
+	if len(args) > 0 {
+		addr = args[0]
+		// Binding to "localhost" can cause issues with IPv4/IPv6 mismatch.
+		// Prefer binding to all interfaces (e.g. ":8082").
+		addr = strings.Replace(addr, "localhost", "", 1)
+		
+		// If port only (e.g. "8081"), prepend ":"
+		if !strings.Contains(addr, ":") {
+			addr = ":" + addr
+		}
+	}
+
+	srv := playground.NewServer()
+	if err := srv.Start(addr); err != nil {
+		fmt.Fprintf(os.Stderr, "Playground server error: %v\n", err)
 		return 1
 	}
 	return 0
