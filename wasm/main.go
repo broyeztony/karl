@@ -30,14 +30,12 @@ func runKarl(this js.Value, args []js.Value) interface{} {
 	p := parser.New(l)
 	program := p.ParseProgram()
 	
-	if len(p.Errors()) > 0 {
-		msg := "Parse Errors:\n"
-		for _, err := range p.Errors() {
-			msg += fmt.Sprintf("%s\n", err)
+	if errs := p.ErrorsDetailed(); len(errs) > 0 {
+		msg := parser.FormatParseErrors(errs, source, "playground.k")
+		if msg == "" {
+			msg = "parse error"
 		}
-		// Return error string directly?
-		// Better to print to stdout so UI captures it via console override
-		fmt.Print(msg)
+		fmt.Printf("%s\n", msg)
 		return nil
 	}
 
