@@ -46,6 +46,15 @@ Rationale:
 
 ## 3) Developer experience tools
 
+### Playground: `bench`
+
+Positioning:
+- Interactive workbench for quick experiments and snippets
+- Minimal friction for trying Karl in browser/local UI
+
+CLI:
+- `karl bench`
+
 ### Formatter: `plain`
 
 Positioning:
@@ -110,6 +119,7 @@ Positioning:
 - `karl lager`   -> package manager
 - `karl forge`   -> build system
 - `karl plain`   -> formatter
+- `karl bench`   -> playground
 - `karl stern`   -> linter
 - `karl folio`   -> docs generator
 - `karl probe`   -> test runner
