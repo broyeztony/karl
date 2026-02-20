@@ -37,7 +37,7 @@ func main() {
 		os.Exit(parseCommand(os.Args[2:]))
 	case "run":
 		os.Exit(runCommand(os.Args[2:]))
-	case "debug":
+	case "trace", "debug":
 		os.Exit(debugCommand(os.Args[2:]))
 	case "loom":
 		os.Exit(loomCommand(os.Args[2:]))
@@ -69,7 +69,8 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "\nCommands:\n")
 	fmt.Fprintf(os.Stderr, "  parse <file.k>           parse a file and print the AST\n")
 	fmt.Fprintf(os.Stderr, "  run <file.k>             run a file using the interpreter (program args after --)\n")
-	fmt.Fprintf(os.Stderr, "  debug <file.k>           run a file with the CLI debugger\n")
+	fmt.Fprintf(os.Stderr, "  trace <file.k>           run a file with the CLI debugger\n")
+	fmt.Fprintf(os.Stderr, "  debug <file.k>           debugger alias (deprecated)\n")
 	fmt.Fprintf(os.Stderr, "  loom <file.k>            run a file using the Loom runtime\n")
 	fmt.Fprintf(os.Stderr, "  repl                     start the REPL\n")
 	fmt.Fprintf(os.Stderr, "  repl-server              start the REPL server\n")
@@ -314,6 +315,7 @@ func debugCommand(args []string) int {
 
 func debugUsage() {
 	fmt.Fprintf(os.Stderr, "Usage:\n")
+	fmt.Fprintf(os.Stderr, "  karl trace <file.k> [--task-failure-policy=fail-fast|defer] [-- <program args...>]\n")
 	fmt.Fprintf(os.Stderr, "  karl debug <file.k> [--task-failure-policy=fail-fast|defer] [-- <program args...>]\n")
 	fmt.Fprintf(os.Stderr, "  <file> can be '-' to read from stdin\n")
 	fmt.Fprintf(os.Stderr, "  program args are only accepted after `--`\n")
