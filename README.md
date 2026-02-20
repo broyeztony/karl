@@ -8,7 +8,7 @@
 
 ![Karl REPL](./assets/repl.png)
 
-Watch the YouTube video: [**Karl: First Impressions (Live Language Demo)**](https://www.youtube.com/watch?v=pes-ZOvM0s0)
+Watch the YouTube video: [**Karl Playground, Loom, Sheets & Jupyter Lab integration**](https://www.youtube.com/watch?v=DKqPl7-Rjg8)
 
 #### Tour of Karl
 
