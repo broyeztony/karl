@@ -6,6 +6,8 @@
 [![CI](https://github.com/broyeztony/Karl/actions/workflows/ci.yml/badge.svg)](https://github.com/broyeztony/Karl/actions/workflows/ci.yml)
 [![Workflow Tests](https://github.com/broyeztony/Karl/actions/workflows/workflow-tests.yml/badge.svg)](https://github.com/broyeztony/Karl/actions/workflows/workflow-tests.yml)
 
+**Try Karl Playground:** [karl-lang.org](https://karl-lang.org) ([fallback](https://broyeztony.github.io/Karl/))
+
 ![Karl REPL](./assets/repl.png)
 
 Watch the YouTube video: [**Karl Playground, Loom, Sheets & Jupyter Lab integration**](https://www.youtube.com/watch?v=DKqPl7-Rjg8)
@@ -128,9 +130,21 @@ Or build from source:
 go build -o karl .
 ```
 
-### Jupyter Kernel and Notebook Command
+### Karl Playground
 
-Use Karl notebooks from the CLI with:
+Use Karl directly in the browser at [karl-lang.org](https://karl-lang.org).
+You can also run it locally with `karl playground` (default `http://localhost:8081`).
+More details: [playground/README.md](playground/README.md).
+
+### Karl Sheets
+
+Karl includes a reactive spreadsheet runtime where cell formulas are Karl expressions.
+Start it with `karl spreadsheet` (default `http://localhost:8080`).
+The web app lives in `assets/spreadsheet/`.
+
+### Karl Notebook and Jupyter Kernel
+
+Use Karl notebooks from the CLI:
 ```
 karl notebook notebook/examples/01-quickstart.knb
 karl notebook convert in.ipynb out.knb
@@ -152,8 +166,6 @@ cat <file.k> | karl run -
 ```
 
 **REPL**: Start an interactive session with `karl loom`. See [repl/README.md](repl/README.md) for details.
-
-**Playground**: Launch the web-based playground with `karl playground`. See [playground/README.md](playground/README.md) for details.
 
 ### VS Code
 
