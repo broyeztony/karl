@@ -21,14 +21,17 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		usage()
-		os.Exit(2)
+		printVersion(os.Stdout)
+		usage(os.Stdout)
+		os.Exit(0)
 	}
 
 	sub := os.Args[1]
 	switch sub {
+	case "-v", "--version", "version":
+		os.Exit(versionCommand(os.Args[2:], os.Stdout, os.Stderr))
 	case "-h", "--help", "help":
-		usage()
+		usage(os.Stdout)
 		return
 	case "parse":
 		os.Exit(parseCommand(os.Args[2:]))
@@ -53,27 +56,60 @@ func main() {
 		os.Exit(playgroundCommand(os.Args[2:]))
 	default:
 		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", sub)
-		usage()
+		usage(os.Stderr)
 		os.Exit(2)
 	}
 }
 
-func usage() {
-	fmt.Fprintf(os.Stderr, "Usage:\n")
-	fmt.Fprintf(os.Stderr, "  karl <command> [arguments]\n")
-	fmt.Fprintf(os.Stderr, "\nCommands:\n")
-	fmt.Fprintf(os.Stderr, "  parse <file.k>           parse a file and print the AST\n")
-	fmt.Fprintf(os.Stderr, "  run <file.k>             run a file using the interpreter (program args after --)\n")
-	fmt.Fprintf(os.Stderr, "  loom <file.k>            run a file using the Loom runtime\n")
-	fmt.Fprintf(os.Stderr, "  repl                     start the REPL\n")
-	fmt.Fprintf(os.Stderr, "  repl-server              start the REPL server\n")
-	fmt.Fprintf(os.Stderr, "  repl-client              start the REPL client\n")
-	fmt.Fprintf(os.Stderr, "  notebook <file.knb>      run a notebook\n")
-	fmt.Fprintf(os.Stderr, "  notebook convert <in.ipynb> <out.knb> convert Jupyter notebook to Karl notebook\n")
-	fmt.Fprintf(os.Stderr, "  kernel <connection_file> start Jupyter kernel\n")
-	fmt.Fprintf(os.Stderr, "  spreadsheet [addr]       start reactive spreadsheet server (default :8080)\n")
-	fmt.Fprintf(os.Stderr, "  playground [addr]        start WASM playground server (default :8081)\n")
-	fmt.Fprintf(os.Stderr, "  help                     show this help message\n")
+func usage(w io.Writer) {
+	fmt.Fprintf(w, "Usage:\n")
+	fmt.Fprintf(w, "  karl <command> [arguments]\n")
+	fmt.Fprintf(w, "\nCommands:\n")
+	fmt.Fprintf(w, "  version                  print Karl CLI version\n")
+	fmt.Fprintf(w, "  parse <file.k>           parse a file and print the AST\n")
+	fmt.Fprintf(w, "  run <file.k>             run a file using the interpreter (program args after --)\n")
+	fmt.Fprintf(w, "  loom <file.k>            run a file using the Loom runtime\n")
+	fmt.Fprintf(w, "  repl                     start the REPL\n")
+	fmt.Fprintf(w, "  repl-server              start the REPL server\n")
+	fmt.Fprintf(w, "  repl-client              start the REPL client\n")
+	fmt.Fprintf(w, "  notebook <file.knb>      run a notebook\n")
+	fmt.Fprintf(w, "  notebook convert <in.ipynb> <out.knb> convert Jupyter notebook to Karl notebook\n")
+	fmt.Fprintf(w, "  kernel <connection_file> start Jupyter kernel\n")
+	fmt.Fprintf(w, "  spreadsheet [addr]       start reactive spreadsheet server (default :8080)\n")
+	fmt.Fprintf(w, "  playground [addr]        start WASM playground server (default :8081)\n")
+	fmt.Fprintf(w, "  help                     show this help message\n")
+}
+
+func printVersion(w io.Writer) {
+	fmt.Fprintf(w, "Karl CLI version: %s\n", cliVersion())
+}
+
+func versionCommand(args []string, out io.Writer, errOut io.Writer) int {
+	help := false
+	for _, arg := range args {
+		if arg == "-h" || arg == "--help" {
+			help = true
+			continue
+		}
+		if strings.HasPrefix(arg, "-") {
+			fmt.Fprintf(errOut, "unknown flag: %s\n", arg)
+		} else {
+			fmt.Fprintln(errOut, "version takes no arguments")
+		}
+		versionUsage(errOut)
+		return 2
+	}
+	if help {
+		versionUsage(errOut)
+		return 0
+	}
+	printVersion(out)
+	return 0
+}
+
+func versionUsage(w io.Writer) {
+	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  karl version")
 }
 
 func parseCommand(args []string) int {
@@ -556,7 +592,7 @@ func notebookCommand(args []string) int {
 			notebookUsage()
 			return 2
 		}
-		
+
 		if inputFile == "" {
 			inputFile = arg
 		} else {
@@ -584,7 +620,7 @@ func notebookCommand(args []string) int {
 	}
 
 	runner := notebook.NewRunner()
-	
+
 	if step || replMode {
 		if err := runner.RunInteractive(nb, step, replMode, inputFile); err != nil {
 			fmt.Fprintf(os.Stderr, "Interactive execution error: %v\n", err)
@@ -670,19 +706,19 @@ func kernelCommand(args []string) int {
 		fmt.Fprintf(os.Stderr, "Usage: karl kernel <connection_file>\n")
 		return 2
 	}
-	
+
 	configFile := args[0]
 	k, err := kernel.NewKernel(configFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize kernel: %v\n", err)
 		return 1
 	}
-	
+
 	if err := k.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "Kernel error: %v\n", err)
 		return 1
 	}
-	
+
 	return 0
 }
 
@@ -693,7 +729,7 @@ func spreadsheetCommand(args []string) int {
 		// Binding to "localhost" can cause issues with IPv4/IPv6 mismatch.
 		// Prefer binding to all interfaces (e.g. ":8082").
 		addr = strings.Replace(addr, "localhost", "", 1)
-		
+
 		// If port only (e.g. "8081"), prepend ":"
 		if !strings.Contains(addr, ":") {
 			addr = ":" + addr
@@ -715,7 +751,7 @@ func playgroundCommand(args []string) int {
 		// Binding to "localhost" can cause issues with IPv4/IPv6 mismatch.
 		// Prefer binding to all interfaces (e.g. ":8082").
 		addr = strings.Replace(addr, "localhost", "", 1)
-		
+
 		// If port only (e.g. "8081"), prepend ":"
 		if !strings.Contains(addr, ":") {
 			addr = ":" + addr

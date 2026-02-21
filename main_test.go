@@ -79,3 +79,51 @@ func TestParseRunArgsStdinWithProgramArgs(t *testing.T) {
 		t.Fatalf("unexpected programArgs: %#v", programArgs)
 	}
 }
+
+func TestVersionCommandPrintsVersion(t *testing.T) {
+	var out strings.Builder
+	var errOut strings.Builder
+
+	code := versionCommand(nil, &out, &errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d", code)
+	}
+	if !strings.Contains(out.String(), "Karl CLI version: ") {
+		t.Fatalf("expected version output, got %q", out.String())
+	}
+	if errOut.Len() != 0 {
+		t.Fatalf("expected no stderr output, got %q", errOut.String())
+	}
+}
+
+func TestVersionCommandHelp(t *testing.T) {
+	var out strings.Builder
+	var errOut strings.Builder
+
+	code := versionCommand([]string{"--help"}, &out, &errOut)
+	if code != 0 {
+		t.Fatalf("expected exit code 0, got %d", code)
+	}
+	if out.Len() != 0 {
+		t.Fatalf("expected no stdout output, got %q", out.String())
+	}
+	if !strings.Contains(errOut.String(), "karl version") {
+		t.Fatalf("expected version usage, got %q", errOut.String())
+	}
+}
+
+func TestVersionCommandRejectsArgs(t *testing.T) {
+	var out strings.Builder
+	var errOut strings.Builder
+
+	code := versionCommand([]string{"extra"}, &out, &errOut)
+	if code != 2 {
+		t.Fatalf("expected exit code 2, got %d", code)
+	}
+	if out.Len() != 0 {
+		t.Fatalf("expected no stdout output, got %q", out.String())
+	}
+	if !strings.Contains(errOut.String(), "version takes no arguments") {
+		t.Fatalf("expected argument error, got %q", errOut.String())
+	}
+}

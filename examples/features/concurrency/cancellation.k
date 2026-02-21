@@ -22,8 +22,8 @@ sleep(250)
 
 // Cancel a whole group task (it cancels its children too).
 let state2 = { hits: 0 }
-let slow1 = () -> { sleep(200); state2.hits = state2.hits + 1; 1 }
-let slow2 = () -> { sleep(200); state2.hits = state2.hits + 1; 2 }
+let slow1 = () -> { sleep(200); state2.hits += 1; 1 }
+let slow2 = () -> { sleep(200); state2.hits += 1; 2 }
 let join = & { slow1(), slow2() }
 sleep(20)
 join.cancel()

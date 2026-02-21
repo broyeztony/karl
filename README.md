@@ -1,6 +1,6 @@
-<img src="assets/karl.png">
-
-### The Karl programming language
+<p align="center">
+  <img src="assets/karl.png" alt="Karl" />
+</p>
 
 [![CI](https://github.com/broyeztony/Karl/actions/workflows/ci.yml/badge.svg)](https://github.com/broyeztony/Karl/actions/workflows/ci.yml)
 [![Workflow Tests](https://github.com/broyeztony/Karl/actions/workflows/workflow-tests.yml/badge.svg)](https://github.com/broyeztony/Karl/actions/workflows/workflow-tests.yml)
@@ -17,9 +17,9 @@ Notably, it features:
 - Recover operator (`?`)
 - Concurrency model inspired by Go
 
-Watch the YouTube video: [**Karl Playground, Loom, Sheets & Jupyter Lab integration**](https://www.youtube.com/watch?v=DKqPl7-Rjg8)
-
 Try Karl today in your browser: [karl-lang.org](https://karl-lang.org)
+
+Watch the YouTube video: [**Karl Playground, Loom, Sheets & Jupyter Lab integration**](https://www.youtube.com/watch?v=DKqPl7-Rjg8)
 
 ## Start Here
 
@@ -41,16 +41,18 @@ Setup and usage: [karl-vscode/README.md](karl-vscode/README.md).
 
 ## Install Karl CLI (Latest Release)
 
-macOS/Linux (`amd64` + `arm64`) one-liner:
-```bash
-os="$(uname -s | tr '[:upper:]' '[:lower:]')"; arch="$(uname -m)"; case "$arch" in x86_64) arch=amd64 ;; arm64|aarch64) arch=arm64 ;; *) echo "unsupported arch: $arch" && exit 1 ;; esac; base="karl-${os}-${arch}"; curl -fsSL "https://github.com/broyeztony/Karl/releases/latest/download/${base}.tar.gz" | tar -xz && mv "$base" karl && chmod +x karl
-```
+Grab the latest release binaries here:
+[https://github.com/broyeztony/Karl/releases/latest](https://github.com/broyeztony/Karl/releases/latest)
 
-Then move `karl` into your `PATH` (for example `/usr/local/bin`).
-All releases: [GitHub Releases](https://github.com/broyeztony/Karl/releases).
+Download the archive for your OS/architecture, extract the binary, make it executable, and move it to your `PATH`.
+Then run:
+```bash
+karl version
+```
 
 Minimal CLI usage:
 ```bash
+karl version
 karl run file.k
 karl parse file.k
 karl loom
