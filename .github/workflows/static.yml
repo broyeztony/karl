@@ -1,0 +1,58 @@
+name: Deploy static content to Pages
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "assets/playground/**"
+      - ".github/workflows/static.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Pages availability
+        id: pages_check
+        run: |
+          code=$(curl -sS -o /tmp/pages.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pages")
+          if [ "$code" = "200" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::GitHub Pages is not enabled. Enable Settings > Pages and choose GitHub Actions as source to activate deployment."
+          fi
+
+      - name: Setup Pages
+        if: steps.pages_check.outputs.enabled == 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        if: steps.pages_check.outputs.enabled == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "./assets/playground"
+
+      - name: Deploy to GitHub Pages
+        if: steps.pages_check.outputs.enabled == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4
