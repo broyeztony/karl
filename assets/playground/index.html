@@ -32,7 +32,14 @@
             border-bottom: 1px solid #44475a;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+        }
+
+        #toolbarCenter {
+            display: flex;
+            align-items: center;
             gap: 15px;
+            margin-left: auto;
         }
 
         #container {
@@ -118,7 +125,7 @@
             gap: 8px;
             font-size: 18px;
             color: #f8f8f2;
-            margin-right: 10px;
+            margin-left: 10px;
         }
 
         .title img {
@@ -172,26 +179,28 @@
 <body>
     <div id="toolbar">
         <div class="title"><img src="logo-32x32.png" alt="Karl">bench</div>
-        <button id="runBtn" disabled>Run ▶</button>
-        <label style="font-size: 13px; user-select: none;">
-            <select id="exampleSelect" title="Load a feature example">
-                <option value="quickstart" selected>Quickstart</option>
-                <option value="language_concurrency">Language + Concurrency</option>
-                <option value="functions_lists">Functions + List Ops</option>
-                <option value="ranges_slices">Ranges + Slices</option>
-                <option value="for_then">For Expression + Then Block</option>
-                <option value="match_guards">Match with Guards</option>
-                <option value="maps_sets_objects">Maps, Sets, Objects</option>
-                <option value="recover_operator">Recover Operator (?)</option>
-                <option value="tasks_then">Tasks + then()</option>
-                <option value="join_group">Join Group (&amp; { ... })</option>
-                <option value="channels_stream">Channels Stream</option>
-            </select>
-        </label>
-        <label style="font-size: 14px; user-select: none;">
-            <input type="checkbox" id="autoRun"> Auto Run
-        </label>
-        <span id="status" style="margin-left: 15px;">Loading WASM environment...</span>
+        <div id="toolbarCenter">
+            <button id="runBtn" disabled>Run ▶</button>
+            <span id="status">Loading WASM environment...</span>
+            <label style="font-size: 13px; user-select: none;">
+                <select id="exampleSelect" title="Load a feature example">
+                    <option value="quickstart" selected>Quickstart</option>
+                    <option value="language_concurrency">Language + Concurrency</option>
+                    <option value="functions_lists">Functions + List Ops</option>
+                    <option value="ranges_slices">Ranges + Slices</option>
+                    <option value="for_then">For Expression + Then Block</option>
+                    <option value="match_guards">Match with Guards</option>
+                    <option value="maps_sets_objects">Maps, Sets, Objects</option>
+                    <option value="recover_operator">Recover Operator (?)</option>
+                    <option value="tasks_then">Tasks + then()</option>
+                    <option value="join_group">Join Group (&amp; { ... })</option>
+                    <option value="channels_stream">Channels Stream</option>
+                </select>
+            </label>
+            <label style="font-size: 14px; user-select: none;">
+                <input type="checkbox" id="autoRun"> Auto Run
+            </label>
+        </div>
     </div>
     <div id="container">
         <textarea id="editor" spellcheck="false" placeholder="Write your Karl code here...">// Welcome to Karl Playground
