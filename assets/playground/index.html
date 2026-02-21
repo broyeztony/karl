@@ -204,17 +204,17 @@
     </div>
     <div id="container">
         <textarea id="editor" spellcheck="false" placeholder="Write your Karl code here...">// Welcome to Karl Playground
-// Karl is a functional-first language.
+// Karl is a functional-first, expression-based language.
 
 // Define a function
 let add = (a, b) -> a + b
 
 // Use list operations
 let nums = [1, 2, 3, 4, 5]
-let squares = nums.map((x) -> x * x)
+let squares = nums.map(x -> x * x)
 
 log("Squares:", squares)
-sleep(1500) // Sleep for 1.5 seconds (non-blocking in worker)
+sleep(1500) // Blocks this task for 1.5s (UI stays responsive in playground)
 log("Sum of squares:", squares.reduce(add, 0))
 
 // Example of concurrency
@@ -229,17 +229,17 @@ log(c.recv()) // Returns ["Hello from thread!", false] (value, is_closed)
     <script>
         const EXAMPLES = {
             quickstart: `// Welcome to Karl Playground
-// Karl is a functional-first language.
+// Karl is a functional-first, expression-based language.
 
 // Define a function
 let add = (a, b) -> a + b
 
 // Use list operations
 let nums = [1, 2, 3, 4, 5]
-let squares = nums.map((x) -> x * x)
+let squares = nums.map(x -> x * x)
 
 log("Squares:", squares)
-sleep(1500) // Sleep for 1.5 seconds (non-blocking in worker)
+sleep(1500) // Blocks this task for 1.5s (UI stays responsive in playground)
 log("Sum of squares:", squares.reduce(add, 0))
 
 // Example of concurrency
