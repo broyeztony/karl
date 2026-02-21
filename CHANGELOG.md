@@ -2,6 +2,28 @@
 
 All notable changes to Karl are documented here.
 
+## [v0.7.0] - 2026-02-21
+
+Highlights:
+- Added phase-1 runtime I/O primitives for args, environment, and stdin line input.
+- Added `karl run ... -- <args>` support so Karl programs can consume their own argv cleanly.
+- Added runtime/docs/examples coverage for system primitives in run vs REPL/notebook contexts.
+
+Runtime I/O builtins:
+- Added `argv()` returning user program args (tokens after `--`).
+- Added `programPath()` returning file path, `"<stdin>"`, or `null` in non-run contexts.
+- Added `environ()` returning snapshot `["KEY=value"]` entries.
+- Added `env(name)` returning string value or `null` when missing.
+- Added `readLine()` returning newline-trimmed lines, `null` on EOF, and recoverable runtime errors on I/O failures.
+
+CLI:
+- `karl run` now supports program arguments after `--`.
+- Added validation/guidance when extra positional args are provided without `--`.
+
+Tests & examples:
+- Added runtime I/O tests (`tests/runtime_io_test.go` and `main_test.go`).
+- Added examples: `examples/features/runtime_args_env.k` and `examples/features/stdin_readline.k`.
+
 ## [v0.6.0] - 2026-02-19
 
 Highlights:
