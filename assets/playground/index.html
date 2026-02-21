@@ -217,12 +217,15 @@ log("Squares:", squares)
 sleep(1500) // Blocks this task for 1.5s (UI stays responsive in playground)
 log("Sum of squares:", squares.reduce(add, 0))
 
-// Example of concurrency
+// 'spawn' starts a single background task.
+// '&' is the spawn operator:
+// - single task: & add(1, 2)
+// - task group:  & { add(1, 2), subtract(4, 1) }
 let c = channel()
 spawn((ch) -> {
     ch.send("Hello from thread!")
 })(c)
-log(c.recv()) // Returns ["Hello from thread!", false] (value, is_closed)
+log(c.recv()) // ["Hello from thread!", false] => [value, is_closed]
 </textarea>
         <pre id="output"></pre>
     </div>
@@ -242,12 +245,15 @@ log("Squares:", squares)
 sleep(1500) // Blocks this task for 1.5s (UI stays responsive in playground)
 log("Sum of squares:", squares.reduce(add, 0))
 
-// Example of concurrency
+// 'spawn' starts a single background task.
+// '&' is the spawn operator:
+// - single task: & add(1, 2)
+// - task group:  & { add(1, 2), subtract(4, 1) }
 let c = channel()
 spawn((ch) -> {
     ch.send("Hello from thread!")
 })(c)
-log(c.recv()) // Returns ["Hello from thread!", false] (value, is_closed)`,
+log(c.recv()) // ["Hello from thread!", false] => [value, is_closed]`,
             language_concurrency: `// Karl Playground: language + concurrency demo
 
 let section = (title) -> {
