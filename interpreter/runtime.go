@@ -13,6 +13,7 @@ import (
 type runtimeState struct {
 	mu                sync.Mutex
 	tasks             map[*Task]struct{}
+	nextTaskDebugID   int
 	taskFailurePolicy string
 	fatalTaskFailure  error
 	fatalOnce         sync.Once
@@ -24,18 +25,20 @@ type runtimeState struct {
 	input             io.Reader
 	inputReader       *bufio.Reader
 	inputMu           sync.Mutex
+	inputUnavailable  string
 }
 
 func newRuntimeState() *runtimeState {
 	envSnapshot := os.Environ()
 	return &runtimeState{
 		tasks:             make(map[*Task]struct{}),
+		nextTaskDebugID:   1,
 		taskFailurePolicy: TaskFailurePolicyFailFast,
 		fatalCh:           make(chan struct{}),
 		argv:              []string{},
 		environ:           cloneStrings(envSnapshot),
 		envMap:            makeEnvMap(envSnapshot),
-		input:             os.Stdin,
+		inputUnavailable:  "stdin unavailable",
 	}
 }
 
@@ -46,6 +49,17 @@ func (r *runtimeState) registerTask(t *Task) {
 	r.mu.Lock()
 	r.tasks[t] = struct{}{}
 	r.mu.Unlock()
+}
+
+func (r *runtimeState) nextDebugTaskID() int {
+	if r == nil {
+		return 1
+	}
+	r.mu.Lock()
+	r.nextTaskDebugID++
+	id := r.nextTaskDebugID
+	r.mu.Unlock()
+	return id
 }
 
 func (r *runtimeState) snapshotTasks() []*Task {
@@ -152,6 +166,15 @@ func (r *runtimeState) setInput(input io.Reader) {
 	r.mu.Unlock()
 }
 
+func (r *runtimeState) setInputUnavailableMessage(message string) {
+	if r == nil {
+		return
+	}
+	r.mu.Lock()
+	r.inputUnavailable = message
+	r.mu.Unlock()
+}
+
 func (r *runtimeState) readLine() (string, bool, error) {
 	if r == nil {
 		return "", false, nil
@@ -185,7 +208,11 @@ func (r *runtimeState) inputBufReader() (*bufio.Reader, error) {
 		return r.inputReader, nil
 	}
 	if r.input == nil {
-		return nil, &RuntimeError{Message: "stdin unavailable"}
+		msg := r.inputUnavailable
+		if msg == "" {
+			msg = "stdin unavailable"
+		}
+		return nil, &RuntimeError{Message: msg}
 	}
 	r.inputReader = bufio.NewReader(r.input)
 	return r.inputReader, nil
