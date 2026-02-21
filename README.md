@@ -71,9 +71,3 @@ karl loom
 
 - `Makefile`  
   Common developer workflow commands: `make build`, `make build-wasm`, `make build-all`, `make test`, `make examples`, `make workflow`, `make ci`.
-
-## Specs
-
-- `SPECS/language.md` — syntax + semantics
-- `SPECS/interpreter.md` — runtime model and evaluator notes
-- `SPECS/todolist.md` — short, current priorities for contributors
