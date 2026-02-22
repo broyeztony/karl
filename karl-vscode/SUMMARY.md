@@ -45,7 +45,7 @@ karl-vscode/
 - Increment: `++`, `--`
 
 ✅ **Built-in Functions**
-- I/O: `log`, `http`, `decodeJson`, `encodeJson`
+- I/O: `log`, `http`, `jsonDecode`, `jsonEncode`
 - Concurrency: `rendezvous`, `send`, `recv`, `done`, `then`, `sleep`
 - Collections: `map`, `set`, `filter`, `reduce`, `sum`, `find`, `sort`
 - Strings: `trim`, `toLower`, `split`, `contains`, etc.

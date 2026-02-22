@@ -150,7 +150,7 @@
             "patterns": [
                 {
                     "name": "support.function.builtin.karl",
-                    "match": "\\b(log|sleep|fail|http|decodeJson|encodeJson|map|set|rendezvous)\\b"
+                    "match": "\\b(log|sleep|fail|http|jsonDecode|jsonEncode|map|set|rendezvous)\\b"
                 },
                 {
                     "name": "support.function.string.karl",

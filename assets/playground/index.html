@@ -447,7 +447,7 @@ stream`
                     { regex: /\b(?:true|false|nil|null)\b/, token: "atom" },
                     { regex: /0x[a-f\d]+|[-+]?(?:\.\d+|\d+\.?\d*)(?:e[-+]?\d+)?/i, token: "number" },
                     // Built-ins
-                    { regex: /\b(?:log|http|decodeJson|rendezvous|send|recv|done|sleep|fail|map|filter|reduce|sum|find|sort|length|trim|toLower|toUpper|split)\b/, token: "builtin" },
+                    { regex: /\b(?:log|http|jsonDecode|jsonEncode|rendezvous|send|recv|done|sleep|fail|map|filter|reduce|sum|find|sort|length|trim|toLower|toUpper|split)\b/, token: "builtin" },
                     { regex: /->|!&|&&|\|\||&|\|/, token: "operator" },
                     // Variables (basic heuristic)
                     { regex: /[a-z$][\w$]*/, token: "variable" },

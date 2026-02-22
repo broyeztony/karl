@@ -10,7 +10,7 @@ Beautiful syntax highlighting for the Karl programming language!
 - Keywords: `let`, `if`, `else`, `for`, `match`, `wait`, etc.
 - Async operators: `&` (spawn), `!&` (race)
 - Arrow functions: `->`
-- Built-in functions: `http`, `decodeJson`, `map`, `set`, `rendezvous`
+- Built-in functions: `http`, `jsonDecode`, `map`, `set`, `rendezvous`
 - String and number literals
 - Comments
 
@@ -96,7 +96,7 @@ results
 - **Increment:** `++`, `--`
 
 ### Built-in Functions
-- **I/O:** `log`, `http`, `decodeJson`, `encodeJson`
+- **I/O:** `log`, `http`, `jsonDecode`, `jsonEncode`
 - **Concurrency:** `rendezvous`, `send`, `recv`, `done`, `then`, `wait`, `sleep`
 - **Collections:** `map`, `set`, `filter`, `reduce`, `sum`, `find`, `sort`, `length`
 - **Strings:** `trim`, `toLower`, `toUpper`, `split`, `chars`, `contains`, `startsWith`, `endsWith`, `replace`
