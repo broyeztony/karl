@@ -157,7 +157,9 @@ let found = for true with msg = null {
 // - Non-recoverable errors still call exit(), even if wrapped in `? {}`.
 
 // Builtins that can produce recoverable errors:
-// jsonDecode, readFile, writeFile, appendFile, deleteFile, exists, listDir, http, fail, readLine
+// jsonDecode, readFile, writeFile, appendFile, deleteFile, exists, listDir, http,
+// sqlOpen, sqlClose, sqlExec, sqlQuery, sqlQueryOne, sqlBegin, sqlCommit, sqlRollback,
+// uuidParse, timeParseRFC3339, fail, readLine
 
 // Example: recover from bad JSON
 let raw = "{\"foo\":\"bar\"}"
